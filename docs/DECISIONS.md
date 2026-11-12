@@ -98,3 +98,8 @@ On full ties, the original provider ordering is preserved.
 ## D-018: DRF error response envelope
 - In accordance with the Section 5 API contract, all client-facing API errors return consistent JSON objects of the shape:
   `{"error": {"code": "<string_code>", "message": "<human_message>", "details": ...}}`
+
+## D-019: Frontend MUI 9 theme tokens and TypeScript verbatimModuleSyntax
+- The UI palette precisely mirrors Section 9 and the TailAdmin reference: Primary `#465FFF`, Card radius 16px, Control radius 10px, Input height 44px, and categorical risk palette (`#12B76A`, `#FDB022`, `#F97316`, `#D92D20`, `#7A1F1F`).
+- In MUI 9, direct system props on `Typography` (such as `fontWeight`) and `Stack` (`alignItems`) are handled via `sx` or theme definitions; `TextField` and `Autocomplete` use `slotProps.input`.
+- In TypeScript 6 with `verbatimModuleSyntax: true`, all type-only imports require the explicit `import type` syntax to guarantee zero JS runtime emission.
