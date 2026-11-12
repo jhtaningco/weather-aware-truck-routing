@@ -35,3 +35,28 @@ A custom canvas layer in the exact risk palette, with no `leaflet.heat`. `leafle
 
 ## D-007: Backend app list
 `django.contrib.auth` is in `INSTALLED_APPS` only because DRF imports its models. There are no users, sessions or auth endpoints.
+
+## D-008: Weather threshold boundary semantics and float snapping
+- Continuous float boundaries use lower bound inclusive, upper bound exclusive:
+  - Wind (mph): Low < 25, Moderate [25, 35), High [35, 45), Severe [45, 55), No Travel >= 55.
+  - Rain (in/hr): Low < 0.10, Moderate [0.10, 0.25), High [0.25, 0.50), Severe [0.50, 1.00], No Travel > 1.00.
+  - Snow (in/hr): Low < 0.5, Moderate [0.5, 1.0), High [1.0, 2.0), Severe [2.0, 3.0], No Travel > 3.0.
+- Exactly 1.00 in/hr rain and 3.0 in/hr snow are Severe, matching the assessment table.
+- A float snap tolerance of `1e-7` is used at boundaries so precision noise from summation (e.g. `rain + showers` yielding `0.5 - 1e-9`) snaps to the intended threshold.
+
+## D-009: Sustained wind vs. gusts for risk classification
+Risk classification and load rules evaluate sustained 10-meter wind speed (`wind_speed_10m`). Wind gusts (`wind_gusts_10m`) are informational and displayed in checkpoint popups, but do not alter the risk classification or trigger load escalations.
+
+## D-010: Vehicle load rule escalation
+- Load rules only raise risk, never lower it.
+- Wind >= 55 mph -> No Travel for all loads.
+- Wind in [45, 55) mph and load > 30,000 lb -> No Travel (escalated from Severe). Exactly 30,000 lb does not trigger.
+- Wind in [35, 45) mph and load > 40,000 lb -> at least Severe (escalated from High). Exactly 40,000 lb does not trigger.
+- Checkpoint risk drivers explicitly include `"load"` when a rule escalates the final risk beyond base weather risk.
+
+## D-011: Recommendation ranking tolerances
+Tolerances for lexicographic tie-breaking:
+- Route distance differences under 0.01 miles are treated as tied.
+- Average risk differences under 0.001 are treated as tied.
+- Travel duration differences under 1.0 second are treated as tied.
+On full ties, the original provider ordering is preserved.
