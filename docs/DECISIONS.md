@@ -110,3 +110,10 @@ On full ties, the original provider ordering is preserved.
 - Route polylines and checkpoint markers are managed imperatively via `L.layerGroup` instances inside specialized controller components (`RouteLayers`, `CheckpointMarkers`, `WaypointMarkers`) rather than declarative React wrapper components. This avoids tearing down and rebuilding hundreds of SVG DOM nodes on user interaction or timeline changes, guaranteeing smooth 60fps interaction.
 - Routes are visually distinct: Recommended (solid `#465FFF`, weight 6.5), Alternative 1 (solid slate `#475467`, weight 4), Alternative 2 (dashed sky `#0BA5EC`, weight 4, dash '8, 8').
 - Checkpoint circle markers are colored by risk ordinal with rich popups exposing checkpoint mile, arrival ETA, weather variables, risk breakdown, and vehicle load rule escalation notices.
+
+## D-021: Corridor grid heatmap and 0-48 hour forecast timeline slider
+- Server-side corridor grid generator (`generate_corridor_grid`) samples points along all route options at 20-mile intervals with +/- 15-mile perpendicular offsets, deduplicated onto a coarse lat/lon grid and capped at 250 points (`MAX_GRID_POINTS = 250`).
+- Weather is batched from Open-Meteo in chunks of 50 coordinates with 1-hour cache TTL.
+- 49 hourly intervals (hours 0 to 48 from departure) are classified for each grid point using the unified risk engine, including vehicle load rules.
+- Compact endpoint `GET /api/plans/<id>/heatmap` returns `{ plan_id, start_time, hours: 49, points, risk }` (~30 KB uncompressed), cached for 24h.
+- Frontend renders a custom Leaflet HTML5 `<canvas>` layer (`HeatmapLayer.tsx`) using soft radial gradients in the exact categorical risk palette (`#12B76A`, `#FDB022`, `#F97316`, `#D92D20`, `#7A1F1F`). Scrubbing the floating `ForecastSlider` updates the canvas imperatively in < 5ms with zero network requests and zero Leaflet layer churn, achieving smooth 60fps performance with play/pause animation and absolute local time formatting.

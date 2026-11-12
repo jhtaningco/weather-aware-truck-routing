@@ -7,4 +7,5 @@ urlpatterns = [
     path("geocode", views.geocode, name="geocode"),
     path("plans", views.create_plan, name="create_plan"),
     path("plans/<str:plan_id>", views.get_plan, name="get_plan"),
+    path("plans/<str:plan_id>/heatmap", views.get_heatmap, name="get_heatmap"),
 ]

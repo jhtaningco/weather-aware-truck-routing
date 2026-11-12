@@ -40,16 +40,11 @@ class OpenMeteoWeatherProvider(WeatherProvider):
         self.base_url = base_url
         self.timeout = timeout
 
-    def get_weather_at_etas(
-        self,
-        points_with_etas: Sequence[tuple[Coordinate, datetime]],
-    ) -> list[CheckpointWeather]:
-        """Fetch and interpolate weather conditions for each point at its arrival ETA."""
-        if not points_with_etas:
-            return []
-
-        # 1. Identify which rounded coordinates are already cached
-        unique_coords = list({_round_coord(p[0]) for p in points_with_etas})
+    def get_hourly_series_batch(
+        self, coords: Sequence[Coordinate]
+    ) -> dict[tuple[float, float], dict[str, list]]:
+        """Fetch and return hourly forecast series for coordinates with 1h caching."""
+        unique_coords = list({_round_coord(c) for c in coords})
         series_by_coord: dict[tuple[float, float], dict[str, list]] = {}
         missing_coords: list[tuple[float, float]] = []
 
@@ -61,7 +56,6 @@ class OpenMeteoWeatherProvider(WeatherProvider):
             else:
                 missing_coords.append(c)
 
-        # 2. Fetch missing coordinates in chunks
         if missing_coords:
             fetched_data = self._fetch_batches(missing_coords)
             for c, series in fetched_data.items():
@@ -69,22 +63,31 @@ class OpenMeteoWeatherProvider(WeatherProvider):
                 cache_key = f"weather:series:{c[0]}:{c[1]}"
                 cache.set(cache_key, series, timeout=WEATHER_CACHE_TTL)
 
-        # 3. Interpolate for each request item at its exact ETA
+        return series_by_coord
+
+    def interpolate_at_time(
+        self, series: dict[str, list], dt: datetime
+    ) -> CheckpointWeather:
+        """Interpolate weather values from an hourly series at a specific datetime."""
+        if not series or not series.get("times"):
+            return CheckpointWeather(0.0, 0.0, 0.0, 0.0)
+        return self._interpolate_at_eta(series, dt)
+
+    def get_weather_at_etas(
+        self,
+        points_with_etas: Sequence[tuple[Coordinate, datetime]],
+    ) -> list[CheckpointWeather]:
+        """Fetch and interpolate weather conditions for each point at its arrival ETA."""
+        if not points_with_etas:
+            return []
+
+        series_by_coord = self.get_hourly_series_batch([p[0] for p in points_with_etas])
+
         results: list[CheckpointWeather] = []
         for coord, eta in points_with_etas:
             c_round = _round_coord(coord)
-            series = series_by_coord.get(c_round)
-            if series and series.get("times"):
-                weather = self._interpolate_at_eta(series, eta)
-            else:
-                # Fallback to zero/calm weather if fetch failed
-                weather = CheckpointWeather(
-                    wind_mph=0.0,
-                    gust_mph=0.0,
-                    rain_in_hr=0.0,
-                    snow_in_hr=0.0,
-                )
-            results.append(weather)
+            series = series_by_coord.get(c_round, {})
+            results.append(self.interpolate_at_time(series, eta))
 
         return results
 
