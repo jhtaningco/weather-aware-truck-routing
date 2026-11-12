@@ -186,6 +186,7 @@ export default function App() {
                 }}
               >
                 <MapView
+                  key={currentPlan?.id ?? 'initial'}
                   plan={currentPlan}
                   selectedRouteId={selectedRouteId}
                   onSelectRoute={setSelectedRouteId}

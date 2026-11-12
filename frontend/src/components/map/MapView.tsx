@@ -1,9 +1,12 @@
 import { Box } from '@mui/material';
 import 'leaflet/dist/leaflet.css';
-import React from 'react';
+import React, { useState } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
+import { useHeatmap } from '../../hooks/usePlan';
 import type { PlanResponse } from '../../types/api';
 import { CheckpointMarkers } from './CheckpointMarkers';
+import { ForecastSlider } from './ForecastSlider';
+import { HeatmapLayer } from './HeatmapLayer';
 import { MapBoundsController } from './MapBoundsController';
 import { MapLegend } from './MapLegend';
 import { RouteLayers } from './RouteLayers';
@@ -25,6 +28,12 @@ export const MapView: React.FC<MapViewProps> = ({
   selectedRouteId,
   onSelectRoute,
 }) => {
+  const [forecastHour, setForecastHour] = useState<number>(0);
+  const [heatmapVisible, setHeatmapVisible] = useState<boolean>(true);
+
+  // Fetch 48-hour heatmap for current plan
+  const { data: heatmap, isLoading: isHeatmapLoading } = useHeatmap(plan?.id);
+
   const selectedRoute = plan?.routes.find((r) => r.id === selectedRouteId) || plan?.routes[0];
 
   return (
@@ -74,6 +83,12 @@ export const MapView: React.FC<MapViewProps> = ({
               selectedRouteId={selectedRouteId}
             />
 
+            <HeatmapLayer
+              heatmap={heatmap}
+              currentHour={forecastHour}
+              visible={heatmapVisible}
+            />
+
             <RouteLayers
               routes={plan.routes}
               recommendedRouteId={plan.recommended_route_id}
@@ -96,6 +111,18 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* Floating Legend */}
       {plan && <MapLegend />}
+
+      {/* 0-48h Forecast Timeline Slider */}
+      {plan && (
+        <ForecastSlider
+          currentHour={forecastHour}
+          onHourChange={setForecastHour}
+          startTime={plan.inputs.depart_at}
+          heatmapVisible={heatmapVisible}
+          onToggleHeatmap={() => setHeatmapVisible(!heatmapVisible)}
+          isLoading={isHeatmapLoading}
+        />
+      )}
     </Box>
   );
 };

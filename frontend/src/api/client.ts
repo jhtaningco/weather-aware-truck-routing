@@ -1,4 +1,4 @@
-import type { ApiError, GeocodeResult, PlanRequest, PlanResponse } from '../types/api';
+import type { ApiError, GeocodeResult, HeatmapResponse, PlanRequest, PlanResponse } from '../types/api';
 
 /** Geocoding autocomplete request hitting GET /api/geocode?q=... */
 export async function fetchGeocode(query: string, signal?: AbortSignal): Promise<GeocodeResult[]> {
@@ -52,4 +52,13 @@ export async function fetchPlanById(id: string, signal?: AbortSignal): Promise<P
     throw new Error(`Plan fetch error (${resp.status})`);
   }
   return (await resp.json()) as PlanResponse;
+}
+
+/** Fetch 48-hour weather risk heatmap for a plan: GET /api/plans/<id>/heatmap */
+export async function fetchHeatmap(planId: string, signal?: AbortSignal): Promise<HeatmapResponse> {
+  const resp = await fetch(`/api/plans/${encodeURIComponent(planId)}/heatmap`, { signal });
+  if (!resp.ok) {
+    throw new Error(`Heatmap fetch error (${resp.status})`);
+  }
+  return (await resp.json()) as HeatmapResponse;
 }

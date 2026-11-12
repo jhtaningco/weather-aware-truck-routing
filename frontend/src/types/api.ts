@@ -88,6 +88,14 @@ export interface PlanResponse {
   routes: RouteOption[];
 }
 
+export interface HeatmapResponse {
+  plan_id: string;
+  start_time: string; // ISO-8601 UTC
+  hours: number; // 49
+  points: [number, number][]; // [lat, lon]
+  risk: number[][]; // [num_points][49] ordinals 0..4
+}
+
 export interface ApiError {
   error: {
     code: string;
