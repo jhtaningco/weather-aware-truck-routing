@@ -12,6 +12,7 @@ services:
     working_dir: /app
     command: >
       sh -c "pip install --no-cache-dir -r requirements-dev.txt &&
+             python manage.py migrate --noinput &&
              python manage.py runserver 0.0.0.0:8000"
     environment:
       DEBUG: "true"
