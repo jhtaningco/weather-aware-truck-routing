@@ -1,0 +1,103 @@
+{
+  "type": "FeatureCollection",
+  "bbox": [-104.9903, 32.7767, -96.797, 39.7392],
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "summary": {
+          "distance": 1275000.0,
+          "duration": 43200.0
+        },
+        "segments": [
+          {
+            "distance": 1275000.0,
+            "duration": 43200.0,
+            "steps": [
+              {
+                "distance": 450000.0,
+                "duration": 15000.0,
+                "type": 1,
+                "instruction": "Head northwest on US-287 N toward Wichita Falls",
+                "name": "US-287 N",
+                "way_points": [0, 2]
+              },
+              {
+                "distance": 500000.0,
+                "duration": 17000.0,
+                "type": 1,
+                "instruction": "Continue onto I-40 W / US-287 N toward Amarillo",
+                "name": "I-40 W",
+                "way_points": [2, 4]
+              },
+              {
+                "distance": 325000.0,
+                "duration": 11200.0,
+                "type": 1,
+                "instruction": "Merge onto I-25 N toward Denver",
+                "name": "I-25 N",
+                "way_points": [4, 6]
+              }
+            ]
+          }
+        ]
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-96.797, 32.7767],
+          [-97.800, 33.5000],
+          [-98.4934, 33.9137],
+          [-100.000, 34.5000],
+          [-101.8313, 35.222],
+          [-103.6672, 36.5378],
+          [-104.9903, 39.7392]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "summary": {
+          "distance": 1350000.0,
+          "duration": 46800.0
+        },
+        "segments": [
+          {
+            "distance": 1350000.0,
+            "duration": 46800.0,
+            "steps": [
+              {
+                "distance": 700000.0,
+                "duration": 24000.0,
+                "type": 1,
+                "instruction": "Take I-35 N through Oklahoma City",
+                "name": "I-35 N",
+                "way_points": [0, 3]
+              },
+              {
+                "distance": 650000.0,
+                "duration": 22800.0,
+                "type": 1,
+                "instruction": "Take I-70 W toward Denver",
+                "name": "I-70 W",
+                "way_points": [3, 5]
+              }
+            ]
+          }
+        ]
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-96.797, 32.7767],
+          [-97.300, 34.5000],
+          [-97.5164, 35.4676],
+          [-98.500, 37.5000],
+          [-101.500, 39.2000],
+          [-104.9903, 39.7392]
+        ]
+      }
+    }
+  ]
+}

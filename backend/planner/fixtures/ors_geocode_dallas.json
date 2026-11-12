@@ -1,0 +1,33 @@
+{
+  "geocoding": {
+    "version": "0.2"
+  },
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-96.797, 32.7767]
+      },
+      "properties": {
+        "id": "node/12345",
+        "gid": "openstreetmap:venue:node/12345",
+        "layer": "venue",
+        "source": "openstreetmap",
+        "source_id": "node/12345",
+        "name": "Dallas",
+        "confidence": 1.0,
+        "match_type": "exact",
+        "accuracy": "centroid",
+        "country": "United States",
+        "country_a": "USA",
+        "region": "Texas",
+        "region_a": "TX",
+        "county": "Dallas County",
+        "locality": "Dallas",
+        "label": "Dallas, TX, USA"
+      }
+    }
+  ]
+}
