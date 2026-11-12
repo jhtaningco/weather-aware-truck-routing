@@ -24,7 +24,7 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in env_str(name, default).split(",") if item.strip()]
 
 
-DEBUG = env_bool("DEBUG", False)
+DEBUG = env_bool("DEBUG", True)
 
 SECRET_KEY = env_str("SECRET_KEY")
 if not SECRET_KEY:
