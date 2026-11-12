@@ -26,3 +26,12 @@ The date picker uses the browser's time zone. The API receives ISO-8601 with an 
 
 ## D-005: Heatmap rendering
 A custom canvas layer in the exact risk palette, with no `leaflet.heat`. `leaflet.heat` blends by density, which cannot represent categorical risk colors faithfully. To be confirmed again in Phase 6.
+
+## D-006: Library versions pinned in Phase 0
+- MUI `@mui/material` 9.x. Its peer dependencies allow React 17, 18 and 19, so React 18 stays as specified. MUI 9 no longer accepts system props such as `fontWeight` on `Typography`, so weights are set once in `theme.typography` and other styling goes through `sx`.
+- Vite 8, TypeScript 6, ESLint 10, Vitest 5. `npm ci` from the committed lockfile reproduces these.
+- Backend uses version ranges in `requirements.txt` (Django 5.2 LTS, DRF 3.x).
+- MUI X Date Pickers (Phase 4) must be checked for compatibility with MUI 9 before installing.
+
+## D-007: Backend app list
+`django.contrib.auth` is in `INSTALLED_APPS` only because DRF imports its models. There are no users, sessions or auth endpoints.
