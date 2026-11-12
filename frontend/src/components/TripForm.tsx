@@ -122,10 +122,17 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
     });
   };
 
+  const isSameLocation =
+    Boolean(origin) &&
+    Boolean(destination) &&
+    origin?.lat === destination?.lat &&
+    origin?.lon === destination?.lon;
+
   const isFormValid =
     Boolean(origin) &&
     Boolean(destination) &&
     Boolean(departTime) &&
+    !isSameLocation &&
     loadLb >= 0 &&
     loadLb <= 120000;
 
@@ -144,6 +151,12 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
         {error && (
           <Alert severity="error" sx={{ borderRadius: 2 }}>
             {error}
+          </Alert>
+        )}
+
+        {isSameLocation && (
+          <Alert severity="warning" sx={{ borderRadius: 2 }}>
+            Origin and destination must be different locations.
           </Alert>
         )}
 

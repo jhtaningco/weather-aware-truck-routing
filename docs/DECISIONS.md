@@ -117,3 +117,10 @@ On full ties, the original provider ordering is preserved.
 - 49 hourly intervals (hours 0 to 48 from departure) are classified for each grid point using the unified risk engine, including vehicle load rules.
 - Compact endpoint `GET /api/plans/<id>/heatmap` returns `{ plan_id, start_time, hours: 49, points, risk }` (~30 KB uncompressed), cached for 24h.
 - Frontend renders a custom Leaflet HTML5 `<canvas>` layer (`HeatmapLayer.tsx`) using soft radial gradients in the exact categorical risk palette (`#12B76A`, `#FDB022`, `#F97316`, `#D92D20`, `#7A1F1F`). Scrubbing the floating `ForecastSlider` updates the canvas imperatively in < 5ms with zero network requests and zero Leaflet layer churn, achieving smooth 60fps performance with play/pause animation and absolute local time formatting.
+
+## D-022: Edge case handling, geometry performance, and accessibility
+- Origin and destination identity: Submissions with identical coordinates or distance < 0.1 miles are blocked client-side with a warning alert and rejected server-side with `invalid_input`.
+- Short trip guarantees: For trips under the checkpoint interval (< 10-50 miles), checkpoint sampling strictly includes both Mile 0 (Origin) and the Destination point with proportional segment coverage.
+- Departure validation: Departures in the past (> 2 hours ago) or beyond the 16-day forecast horizon are validated with descriptive error envelopes.
+- Route geometries are simplified via Ramer-Douglas-Peucker with a 0.0003-degree tolerance (~30m), minimizing transfer size without perceptible visual loss on the map.
+- Full accessibility pass: Interactive route cards support keyboard navigation (`Enter` and `Space`), focus rings, `role="button"`, and `aria-pressed`; slider controls and toggle chips include descriptive ARIA labels.

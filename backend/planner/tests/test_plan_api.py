@@ -199,6 +199,84 @@ def test_create_plan_invalid_inputs(api_client):
     assert resp_same.status_code == 400
     assert resp_same.json()["error"]["code"] == "invalid_input"
 
+    # Past departure time (> 2 hours ago)
+    past_time = (datetime.now(UTC) - timedelta(hours=5)).isoformat()
+    resp_past = api_client.post(
+        "/api/plans",
+        {
+            "origin": {"lat": 30.0, "lon": -90.0},
+            "destination": {"lat": 31.0, "lon": -90.0},
+            "depart_at": past_time,
+            "load_lb": 10000,
+        },
+        format="json",
+    )
+    assert resp_past.status_code == 400
+    assert resp_past.json()["error"]["code"] == "invalid_input"
+
+    # Exceeding forecast horizon (> 16 days)
+    far_future = (datetime.now(UTC) + timedelta(days=20)).isoformat()
+    resp_future = api_client.post(
+        "/api/plans",
+        {
+            "origin": {"lat": 30.0, "lon": -90.0},
+            "destination": {"lat": 31.0, "lon": -90.0},
+            "depart_at": far_future,
+            "load_lb": 10000,
+        },
+        format="json",
+    )
+    assert resp_future.status_code == 400
+    assert resp_future.json()["error"]["code"] == "invalid_input"
+
+
+def test_create_plan_short_trip_checkpoints(api_client):
+    depart_time = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+
+    class ShortTripRoutingProvider(RoutingProvider):
+        def get_routes(
+            self,
+            origin,
+            destination,
+            load_lb=0.0,
+            preference="recommended",
+            via=None,
+            alternatives=0,
+        ):
+            # Short trip matching haversine distance of coordinates
+            coords = [(origin[0], origin[1]), (destination[0], destination[1])]
+            return [RawRoute("short-1", "Local Highway", 3.81, 360.0, tuple(coords), ())]
+
+    with (
+        patch(
+            "planner.services.planner_service.OpenRouteServiceRoutingProvider",
+            return_value=ShortTripRoutingProvider(),
+        ),
+        patch(
+            "planner.services.planner_service.OpenMeteoWeatherProvider",
+            return_value=StubWeatherProvider(),
+        ),
+    ):
+        resp = api_client.post(
+            "/api/plans",
+            {
+                "origin": {"lat": 32.7767, "lon": -96.7970},
+                "destination": {"lat": 32.8300, "lon": -96.7800},
+                "depart_at": depart_time,
+                "load_lb": 10000,
+                "interval_mi": 25,
+            },
+            format="json",
+        )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    route = data["routes"][0]
+    # Even though interval is 25 mi, a 4.5 mi trip must include both mile 0 and destination
+    assert len(route["checkpoints"]) >= 2
+    assert route["checkpoints"][0]["mile"] == 0.0
+    assert route["checkpoints"][-1]["mile"] == route["distance_mi"]
+
 
 def test_get_plan_by_id(api_client):
     depart_time = (datetime.now(UTC) + timedelta(hours=2)).isoformat()

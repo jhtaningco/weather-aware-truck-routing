@@ -105,6 +105,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
           <Tooltip title={isPlaying ? 'Pause timeline' : 'Play 48h timeline'}>
             <IconButton
               size="small"
+              aria-label={isPlaying ? 'Pause 48-hour timeline animation' : 'Play 48-hour timeline animation'}
               onClick={() => setIsPlaying(!isPlaying)}
               sx={{
                 bgcolor: isPlaying ? 'primary.main' : 'primaryTint',
@@ -122,6 +123,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
           <Tooltip title="Reset to Departure (0h)">
             <IconButton
               size="small"
+              aria-label="Reset timeline to departure hour (0h)"
               onClick={() => {
                 setIsPlaying(false);
                 onHourChange(0);
@@ -182,6 +184,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
       {/* Interactive 0-48h Slider */}
       <Box sx={{ px: 1.5, pt: 0.5 }}>
         <Slider
+          aria-label="48-hour corridor weather forecast timeline"
           value={currentHour}
           min={0}
           max={48}

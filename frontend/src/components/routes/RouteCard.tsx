@@ -29,7 +29,17 @@ export const RouteCard: React.FC<RouteCardProps> = ({
   return (
     <Paper
       elevation={0}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`Select ${route.label}`}
       onClick={() => onSelect(route.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(route.id);
+        }
+      }}
       sx={{
         p: 2.5,
         borderRadius: '16px',
@@ -44,6 +54,10 @@ export const RouteCard: React.FC<RouteCardProps> = ({
         '&:hover': {
           borderColor: isSelected ? 'primary.main' : 'primary.light',
           boxShadow: '0 4px 12px rgba(16, 24, 40, 0.08)',
+        },
+        '&:focus-visible': {
+          outline: '2px solid #465FFF',
+          outlineOffset: '2px',
         },
       }}
     >
