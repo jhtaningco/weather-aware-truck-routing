@@ -130,3 +130,9 @@ On full ties, the original provider ordering is preserved.
 - The container runs as an unprivileged user (`appuser`, UID 10001) with non-root security boundaries and an automated `curl` healthcheck probe on `/api/health`.
 - Dynamic port binding (`0.0.0.0:${PORT:-8000}`) provides drop-in compatibility with Render, Railway, and Fly.io.
 - Authored a structured 7-9 minute Loom walkthrough script (`docs/LOOM_SCRIPT.md`) detailing live demos for normal trips, vehicle load rule escalations, 60fps canvas heatmap timeline scrubbing, architecture review, and test suite execution.
+
+## D-024: Basemap tile provider migration to Esri World Light Gray Canvas
+- Carto recently deprecated free unauthenticated raster tile access and began injecting watermarked "API KEY REQUIRED carto.com/basemaps/apikey" raster tiles on unauthenticated requests.
+- To preserve zero-configuration local development and eliminate API key requirements, the basemap was updated to Esri World Light Gray Canvas (`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`) with a complementary reference labels overlay (`World_Light_Gray_Reference`).
+- Esri Light Gray Canvas is public, unmetered, requires zero API keys, renders no watermarks, and maintains the exact clean, minimalist, high-contrast aesthetic needed for weather risk overlays and route polylines.
+- Configured with `maxNativeZoom={16}` and `maxZoom={19}` to allow smooth tile scaling when users zoom in past level 16.

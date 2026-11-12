@@ -37,7 +37,7 @@ flowchart TD
     
     subgraph Frontend["React 18 + Vite + TypeScript (SPA)"]
         TripForm["TripForm (Origin, Dest, Depart, Load, Interval)"]
-        MapView["MapView (Carto Positron Basemap)"]
+        MapView["MapView (Esri Light Gray Canvas)"]
         CanvasHeatmap["HeatmapLayer (HTML5 Canvas 60fps)"]
         ForecastSlider["ForecastSlider (0-48h Timeline)"]
         RouteCards["RouteList & StackedRiskBar"]

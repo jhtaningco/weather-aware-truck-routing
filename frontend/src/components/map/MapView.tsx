@@ -18,10 +18,12 @@ interface MapViewProps {
   onSelectRoute: (routeId: string) => void;
 }
 
-const CARTO_POSITRON_URL =
-  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const CARTO_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const ESRI_LIGHT_GRAY_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const ESRI_REFERENCE_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+const MAP_ATTRIBUTION =
+  'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ, OpenStreetMap contributors';
 
 export const MapView: React.FC<MapViewProps> = ({
   plan,
@@ -71,8 +73,14 @@ export const MapView: React.FC<MapViewProps> = ({
         style={{ width: '100%', height: '100%' }}
       >
         <TileLayer
-          attribution={CARTO_ATTRIBUTION}
-          url={CARTO_POSITRON_URL}
+          attribution={MAP_ATTRIBUTION}
+          url={ESRI_LIGHT_GRAY_URL}
+          maxNativeZoom={16}
+          maxZoom={19}
+        />
+        <TileLayer
+          url={ESRI_REFERENCE_URL}
+          maxNativeZoom={16}
           maxZoom={19}
         />
 
