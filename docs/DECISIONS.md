@@ -83,3 +83,18 @@ On full ties, the original provider ordering is preserved.
 ## D-015: Geocoding caching and offline resilience
 - Geocoding results are cached for 24 hours (`86400s`).
 - When `ORS_API_KEY` is unavailable or throttled, curated coordinates for major logistics hubs (Dallas, Denver, Chicago, Atlanta, etc.) provide offline resilience during development and testing.
+
+## D-016: Open-Meteo weather batching and linear interpolation
+- Forecasts are fetched in batched coordinate requests using `wind_speed_unit=mph`, `precipitation_unit=inch`, and `timezone=UTC`.
+- Rain precipitation rate is calculated as `rain + showers` (in/hr). Snow rate is `snowfall` (in/hr).
+- Values at intermediate ETAs are linearly interpolated between bounding hourly forecasts. If an arrival ETA precedes the first hour or exceeds the forecast horizon, values are clamped to the nearest valid bounding hour.
+- Forecast series are cached for 1 hour (`3600s`) keyed by coordinate rounded to 2 decimal places (`~1.1 km`).
+
+## D-017: Midpoint segment-mile attribution
+- Each checkpoint covers a segment of the route defined from the midpoint to the previous checkpoint to the midpoint to the next (mile 0 to first midpoint, and last midpoint to destination).
+- This yields a telescoping sum where the segment miles strictly and mathematically sum to the route's total distance.
+- Mileage-weighted average risk is calculated as `sum(segment_length * risk_ordinal) / total_distance`.
+
+## D-018: DRF error response envelope
+- In accordance with the Section 5 API contract, all client-facing API errors return consistent JSON objects of the shape:
+  `{"error": {"code": "<string_code>", "message": "<human_message>", "details": ...}}`
