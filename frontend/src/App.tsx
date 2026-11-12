@@ -1,6 +1,5 @@
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
-import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
+import NavigationOutlinedIcon from '@mui/icons-material/NavigationOutlined';
 import {
   Alert,
   AppBar,
@@ -8,30 +7,33 @@ import {
   Card,
   Chip,
   Container,
-  Paper,
   Skeleton,
   Stack,
   Toolbar,
   Typography,
 } from '@mui/material';
 import { useState } from 'react';
-import { RiskChip } from './components/RiskChip';
+import { MapView } from './components/map/MapView';
+import { RouteList } from './components/routes/RouteList';
 import { TripForm } from './components/TripForm';
 import { useCreatePlan } from './hooks/usePlan';
 import type { PlanRequest, PlanResponse } from './types/api';
-import type { RiskLevelOrdinal } from './types/risk';
 
 export default function App() {
   const [currentPlan, setCurrentPlan] = useState<PlanResponse | null>(null);
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const { mutate: planTrip, isPending, error } = useCreatePlan();
 
   const handleTripSubmit = (request: PlanRequest) => {
     planTrip(request, {
       onSuccess: (data) => {
         setCurrentPlan(data);
+        setSelectedRouteId(data.recommended_route_id);
       },
     });
   };
+
+  const selectedRoute = currentPlan?.routes.find((r) => r.id === selectedRouteId) || currentPlan?.routes[0];
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
@@ -67,16 +69,29 @@ export default function App() {
                   Spotter.AI Weather-Aware Routing
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Truck Navigation • Risk Classification • Forecast Heatmap
+                  Commercial Truck Navigation • Checkpoint Risk • Corridor Analysis
                 </Typography>
               </Box>
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+              {currentPlan && selectedRoute && (
+                <Chip
+                  icon={<NavigationOutlinedIcon sx={{ fontSize: '14px !important' }} />}
+                  label={`${currentPlan.inputs.origin.label.split(',')[0]} → ${currentPlan.inputs.destination.label.split(',')[0]} (${selectedRoute.distance_mi.toFixed(0)} mi)`}
+                  size="small"
+                  sx={{
+                    bgcolor: 'primaryTint',
+                    color: 'primary.main',
+                    fontWeight: 600,
+                    display: { xs: 'none', sm: 'inline-flex' },
+                  }}
+                />
+              )}
               <Chip
                 label="HGV Driving Profile"
                 size="small"
-                sx={{ bgcolor: 'primaryTint', color: 'primary.main', fontWeight: 500 }}
+                sx={{ bgcolor: '#F2F4F7', color: 'text.secondary', fontWeight: 500 }}
               />
               <Chip
                 label="Live Weather v1"
@@ -103,7 +118,7 @@ export default function App() {
             {/* Left Sidebar Panel */}
             <Box
               sx={{
-                width: { xs: '100%', md: 440 },
+                width: { xs: '100%', md: 460 },
                 flexShrink: 0,
                 display: 'flex',
                 flexDirection: 'column',
@@ -119,87 +134,40 @@ export default function App() {
                 />
               </Card>
 
+              {/* Error Message if mutation fails */}
+              {error && (
+                <Alert severity="error" sx={{ borderRadius: 2 }}>
+                  {error.message || 'Unable to generate route options. Please verify input locations and try again.'}
+                </Alert>
+              )}
+
               {/* Loading Skeletons */}
               {isPending && (
                 <Card sx={{ p: 3 }}>
                   <Stack spacing={2}>
                     <Skeleton variant="text" width="60%" height={28} />
-                    <Skeleton variant="rounded" height={80} />
-                    <Skeleton variant="rounded" height={60} />
-                    <Skeleton variant="rounded" height={60} />
+                    <Skeleton variant="rounded" height={100} />
+                    <Skeleton variant="rounded" height={140} />
+                    <Skeleton variant="rounded" height={140} />
                   </Stack>
                 </Card>
               )}
 
-              {/* Routes Overview Placeholder (Phase 4 -> Phase 5) */}
-              {currentPlan && (
-                <Card sx={{ p: 3 }}>
-                  <Stack spacing={2}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="h6">Generated Routes</Typography>
-                      <Chip
-                        label={`${currentPlan.routes.length} Available`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    </Box>
-
-                    <Alert severity="success" sx={{ borderRadius: 2 }}>
-                      {currentPlan.recommendation.explanation}
-                    </Alert>
-
-                    <Stack spacing={1.5}>
-                      {currentPlan.routes.map((r) => {
-                        const maxRiskOrdinal = (r.summary.max_risk as RiskLevelOrdinal) || 0;
-                        return (
-                          <Paper
-                            key={r.id}
-                            variant="outlined"
-                            sx={{
-                              p: 2,
-                              borderRadius: 2,
-                              borderColor:
-                                r.id === currentPlan.recommended_route_id ? 'primary.main' : 'border',
-                              bgcolor:
-                                r.id === currentPlan.recommended_route_id ? 'primaryTint' : 'background.paper',
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <Box>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                  {r.label}
-                                  {r.id === currentPlan.recommended_route_id && (
-                                    <Typography
-                                      component="span"
-                                      color="primary.main"
-                                      sx={{ ml: 1, fontSize: '0.8rem', fontWeight: 600 }}
-                                    >
-                                      (Recommended)
-                                    </Typography>
-                                  )}
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                  {r.distance_mi} mi • {Math.round(r.duration_s / 3600)}h{' '}
-                                  {Math.round((r.duration_s % 3600) / 60)}m
-                                </Typography>
-                              </Box>
-                              <RiskChip level={maxRiskOrdinal} />
-                            </Box>
-                          </Paper>
-                        );
-                      })}
-                    </Stack>
-                  </Stack>
-                </Card>
+              {/* Route Options List & Summaries */}
+              {currentPlan && !isPending && (
+                <RouteList
+                  plan={currentPlan}
+                  selectedRouteId={selectedRouteId}
+                  onSelectRoute={setSelectedRouteId}
+                />
               )}
             </Box>
 
-            {/* Right Map View / Hero Container */}
+            {/* Right Map View Container */}
             <Box
               sx={{
                 flex: 1,
-                minHeight: { xs: 450, md: 'auto' },
+                minHeight: { xs: 500, md: 'auto' },
                 display: 'flex',
                 flexDirection: 'column',
               }}
@@ -209,51 +177,44 @@ export default function App() {
                   flex: 1,
                   p: 0,
                   overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  bgcolor: 'background.paper',
                   position: 'relative',
                   border: '1px solid',
                   borderColor: 'border',
+                  boxShadow: '0 1px 3px rgba(16, 24, 40, 0.06)',
+                  borderRadius: '16px',
+                  display: 'flex',
                 }}
               >
-                <Stack spacing={2} sx={{ maxWidth: 460, textAlign: 'center', p: 4, alignItems: 'center' }}>
+                <MapView
+                  plan={currentPlan}
+                  selectedRouteId={selectedRouteId}
+                  onSelectRoute={setSelectedRouteId}
+                />
+
+                {/* Initial Blank Map Prompt Overlay */}
+                {!currentPlan && !isPending && (
                   <Box
                     sx={{
-                      width: 64,
-                      height: 64,
+                      position: 'absolute',
+                      top: 24,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 1000,
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid #E4E7EC',
+                      boxShadow: '0 4px 16px rgba(16, 24, 40, 0.1)',
                       borderRadius: 3,
-                      bgcolor: 'primaryTint',
-                      color: 'primary.main',
-                      display: 'grid',
-                      placeItems: 'center',
+                      px: 3,
+                      py: 1.5,
+                      pointerEvents: 'none',
                     }}
                   >
-                    <MapOutlinedIcon sx={{ fontSize: 36 }} />
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      Enter origin, destination, and departure time to view route options & weather risk
+                    </Typography>
                   </Box>
-                  <Typography variant="h6">Map & Corridor Visualization</Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {currentPlan
-                      ? `Trip loaded: ${currentPlan.inputs.origin.label} to ${currentPlan.inputs.destination.label}. Map layers, checkpoints, and 48h forecast heatmap ready for Phase 5 & 6.`
-                      : 'Submit a trip from the left panel to generate route options, checkpoints, and weather risk analysis.'}
-                  </Typography>
-
-                  {currentPlan && (
-                    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 1 }}>
-                      <Chip
-                        icon={<RouteOutlinedIcon />}
-                        label={`${currentPlan.routes.length} Routes Generated`}
-                        size="small"
-                      />
-                      <Chip
-                        label={`${currentPlan.routes[0]?.checkpoints.length ?? 0} Checkpoints`}
-                        size="small"
-                      />
-                    </Box>
-                  )}
-                </Stack>
+                )}
               </Card>
             </Box>
           </Box>

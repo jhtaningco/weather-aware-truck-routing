@@ -41,3 +41,11 @@ export const RISK_LEVELS: Record<RiskLevelOrdinal, RiskColorSpec> = {
     key: 'no_travel',
   },
 };
+
+export function avgRiskToOrdinal(avgRisk: number): RiskLevelOrdinal {
+  if (avgRisk >= 3.5) return 4;
+  if (avgRisk >= 2.5) return 3;
+  if (avgRisk >= 1.5) return 2;
+  if (avgRisk >= 0.5) return 1;
+  return 0;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RISK_LEVELS, type RiskLevelOrdinal } from './risk';
+import { RISK_LEVELS, avgRiskToOrdinal, type RiskLevelOrdinal } from './risk';
 
 describe('RiskLevel tokens', () => {
   it('defines all 5 ordinal levels with solid and soft tokens', () => {
@@ -19,5 +19,18 @@ describe('RiskLevel tokens', () => {
     expect(RISK_LEVELS[2].solid).toBe('#F97316'); // High
     expect(RISK_LEVELS[3].solid).toBe('#D92D20'); // Severe
     expect(RISK_LEVELS[4].solid).toBe('#7A1F1F'); // No Travel
+  });
+
+  it('correctly maps continuous average risk to ordinals', () => {
+    expect(avgRiskToOrdinal(0)).toBe(0);
+    expect(avgRiskToOrdinal(0.49)).toBe(0);
+    expect(avgRiskToOrdinal(0.5)).toBe(1);
+    expect(avgRiskToOrdinal(1.49)).toBe(1);
+    expect(avgRiskToOrdinal(1.5)).toBe(2);
+    expect(avgRiskToOrdinal(2.49)).toBe(2);
+    expect(avgRiskToOrdinal(2.5)).toBe(3);
+    expect(avgRiskToOrdinal(3.49)).toBe(3);
+    expect(avgRiskToOrdinal(3.5)).toBe(4);
+    expect(avgRiskToOrdinal(4.0)).toBe(4);
   });
 });

@@ -103,3 +103,10 @@ On full ties, the original provider ordering is preserved.
 - The UI palette precisely mirrors Section 9 and the TailAdmin reference: Primary `#465FFF`, Card radius 16px, Control radius 10px, Input height 44px, and categorical risk palette (`#12B76A`, `#FDB022`, `#F97316`, `#D92D20`, `#7A1F1F`).
 - In MUI 9, direct system props on `Typography` (such as `fontWeight`) and `Stack` (`alignItems`) are handled via `sx` or theme definitions; `TextField` and `Autocomplete` use `slotProps.input`.
 - In TypeScript 6 with `verbatimModuleSyntax: true`, all type-only imports require the explicit `import type` syntax to guarantee zero JS runtime emission.
+
+## D-020: Imperative Leaflet layer management and React 18 compatibility
+- Pinned `react-leaflet` to `^4.2.1` and `leaflet` to `^1.9.4` (react-leaflet v5 requires React 19; v4 maintains exact peer compatibility with React 18).
+- Base tiles use Carto Positron (`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`).
+- Route polylines and checkpoint markers are managed imperatively via `L.layerGroup` instances inside specialized controller components (`RouteLayers`, `CheckpointMarkers`, `WaypointMarkers`) rather than declarative React wrapper components. This avoids tearing down and rebuilding hundreds of SVG DOM nodes on user interaction or timeline changes, guaranteeing smooth 60fps interaction.
+- Routes are visually distinct: Recommended (solid `#465FFF`, weight 6.5), Alternative 1 (solid slate `#475467`, weight 4), Alternative 2 (dashed sky `#0BA5EC`, weight 4, dash '8, 8').
+- Checkpoint circle markers are colored by risk ordinal with rich popups exposing checkpoint mile, arrival ETA, weather variables, risk breakdown, and vehicle load rule escalation notices.
