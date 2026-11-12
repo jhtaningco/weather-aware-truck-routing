@@ -124,3 +124,9 @@ On full ties, the original provider ordering is preserved.
 - Departure validation: Departures in the past (> 2 hours ago) or beyond the 16-day forecast horizon are validated with descriptive error envelopes.
 - Route geometries are simplified via Ramer-Douglas-Peucker with a 0.0003-degree tolerance (~30m), minimizing transfer size without perceptible visual loss on the map.
 - Full accessibility pass: Interactive route cards support keyboard navigation (`Enter` and `Space`), focus rings, `role="button"`, and `aria-pressed`; slider controls and toggle chips include descriptive ARIA labels.
+
+## D-023: Single-container production deployment with WhiteNoise and Loom walkthrough
+- Multi-stage Dockerfile: Stage 1 builds the Vite React SPA via Node 22; Stage 2 installs Python 3.12 dependencies and serves the compiled assets via WhiteNoise (`CompressedManifestStaticFilesStorage`) alongside DRF endpoints through Gunicorn.
+- The container runs as an unprivileged user (`appuser`, UID 10001) with non-root security boundaries and an automated `curl` healthcheck probe on `/api/health`.
+- Dynamic port binding (`0.0.0.0:${PORT:-8000}`) provides drop-in compatibility with Render, Railway, and Fly.io.
+- Authored a structured 7-9 minute Loom walkthrough script (`docs/LOOM_SCRIPT.md`) detailing live demos for normal trips, vehicle load rule escalations, 60fps canvas heatmap timeline scrubbing, architecture review, and test suite execution.
