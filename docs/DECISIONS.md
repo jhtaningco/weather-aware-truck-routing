@@ -60,3 +60,26 @@ Tolerances for lexicographic tie-breaking:
 - Average risk differences under 0.001 are treated as tied.
 - Travel duration differences under 1.0 second are treated as tied.
 On full ties, the original provider ordering is preserved.
+
+## D-012: Layered 3-route generation and deduplication
+- OpenRouteService `driving-hgv` profile is queried behind a `RoutingProvider` abstraction.
+- Multi-layer generation strategy:
+  1. Provider native alternatives (`alternative_routes: { target_count: 3 }`).
+  2. Distinct request preferences (`fastest`, `shortest`, `recommended`).
+  3. Perpendicular detour waypoints at corridor midpoint (left and right offsets of 25 miles).
+- Deduplication: routes with >20% distance difference are automatically considered distinct; routes within 20% distance difference are deduplicated by checking whether >90% of sampled points lie within 1.0 km (~0.62 miles) of an existing route.
+- If fewer than 3 distinct routes physically exist (e.g. single-highway or short trips), the system returns the distinct routes found with an explanatory note rather than hallucinating artificial routes.
+
+## D-013: Checkpoint sampling and boundary guarantees
+- Routes are sampled along cumulative haversine distance at user-specified intervals (10, 25, or 50 miles).
+- Mile 0 (origin) is always the first checkpoint.
+- The destination is always included. If the last intermediate checkpoint is within 0.5 miles of the destination, it is snapped directly to the destination point to avoid redundant adjacent checkpoints.
+
+## D-014: Checkpoint ETA interpolation via step durations
+- Checkpoint ETAs are derived from provider step/segment durations and distances, interpolating driving time within individual steps.
+- This preserves realistic travel times (e.g. 70 mph interstate vs. 25 mph city traffic) instead of using a naive single average speed.
+- Monotonicity is guaranteed, and final arrival ETA matches total route duration exactly.
+
+## D-015: Geocoding caching and offline resilience
+- Geocoding results are cached for 24 hours (`86400s`).
+- When `ORS_API_KEY` is unavailable or throttled, curated coordinates for major logistics hubs (Dallas, Denver, Chicago, Atlanta, etc.) provide offline resilience during development and testing.
