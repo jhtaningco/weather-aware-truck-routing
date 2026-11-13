@@ -9,6 +9,7 @@ import { ForecastSlider } from './ForecastSlider';
 import { HeatmapLayer } from './HeatmapLayer';
 import { MapBoundsController } from './MapBoundsController';
 import { MapLegend } from './MapLegend';
+import { RecenterButton } from './RecenterButton';
 import { RouteLayers } from './RouteLayers';
 import { WaypointMarkers } from './WaypointMarkers';
 
@@ -113,6 +114,11 @@ export const MapView: React.FC<MapViewProps> = ({
               selectedRouteId={selectedRouteId}
             />
 
+            <RecenterButton
+              routes={plan.routes}
+              selectedRouteId={selectedRouteId}
+            />
+
             <HeatmapLayer
               heatmap={heatmap}
               currentHour={forecastHour}
@@ -151,6 +157,7 @@ export const MapView: React.FC<MapViewProps> = ({
           heatmapVisible={heatmapVisible}
           onToggleHeatmap={() => setHeatmapVisible(!heatmapVisible)}
           isLoading={isHeatmapLoading}
+          heatmap={heatmap}
         />
       )}
     </Box>

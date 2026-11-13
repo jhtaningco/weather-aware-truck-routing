@@ -1,5 +1,7 @@
+import FullscreenOutlinedIcon from '@mui/icons-material/FullscreenOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import NavigationOutlinedIcon from '@mui/icons-material/NavigationOutlined';
+import ViewSidebarOutlinedIcon from '@mui/icons-material/ViewSidebarOutlined';
 import {
   Alert,
   AppBar,
@@ -10,6 +12,7 @@ import {
   Skeleton,
   Stack,
   Toolbar,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useState } from 'react';
@@ -22,6 +25,7 @@ import type { PlanRequest, PlanResponse } from './types/api';
 export default function App() {
   const [currentPlan, setCurrentPlan] = useState<PlanResponse | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const { mutate: planTrip, isPending, error } = useCreatePlan();
 
   const handleTripSubmit = (request: PlanRequest) => {
@@ -98,6 +102,34 @@ export default function App() {
                 size="small"
                 sx={{ bgcolor: '#ECFDF3', color: '#12B76A', fontWeight: 500 }}
               />
+
+              {currentPlan && (
+                <Tooltip title={sidebarOpen ? 'Expand map full-width' : 'Show route planning panel'}>
+                  <Chip
+                    icon={
+                      sidebarOpen ? (
+                        <FullscreenOutlinedIcon sx={{ fontSize: '16px !important' }} />
+                      ) : (
+                        <ViewSidebarOutlinedIcon sx={{ fontSize: '16px !important' }} />
+                      )
+                    }
+                    label={sidebarOpen ? 'Full Map' : 'Show Plans'}
+                    size="small"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    sx={{
+                      cursor: 'pointer',
+                      bgcolor: sidebarOpen ? '#F2F4F7' : 'primaryTint',
+                      color: sidebarOpen ? 'text.secondary' : 'primary.main',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      '&:hover': {
+                        bgcolor: 'primaryTint',
+                        color: 'primary.main',
+                      },
+                    }}
+                  />
+                </Tooltip>
+              )}
             </Box>
           </Toolbar>
         </Container>
@@ -120,7 +152,7 @@ export default function App() {
               sx={{
                 width: { xs: '100%', md: 460 },
                 flexShrink: 0,
-                display: 'flex',
+                display: sidebarOpen ? 'flex' : 'none',
                 flexDirection: 'column',
                 gap: 2.5,
               }}
@@ -194,6 +226,32 @@ export default function App() {
                   selectedRouteId={selectedRouteId}
                   onSelectRoute={setSelectedRouteId}
                 />
+
+                {/* Floating Show Sidebar Pill when map is full-width */}
+                {!sidebarOpen && currentPlan && (
+                  <Chip
+                    icon={<ViewSidebarOutlinedIcon sx={{ fontSize: '15px !important' }} />}
+                    label="Show Routes"
+                    size="small"
+                    onClick={() => setSidebarOpen(true)}
+                    sx={{
+                      position: 'absolute',
+                      top: 16,
+                      left: 60,
+                      zIndex: 1000,
+                      cursor: 'pointer',
+                      bgcolor: 'white',
+                      boxShadow: '0 4px 16px rgba(16, 24, 40, 0.14)',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      border: '1px solid #E4E7EC',
+                      '&:hover': {
+                        bgcolor: 'primaryTint',
+                        color: 'primary.main',
+                      },
+                    }}
+                  />
+                )}
 
                 {/* Initial Blank Map Prompt Overlay */}
                 {!currentPlan && !isPending && (

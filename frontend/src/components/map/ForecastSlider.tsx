@@ -13,7 +13,8 @@ import {
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { HeatmapResponse } from '../../types/api';
 import { RISK_LEVELS, type RiskLevelOrdinal } from '../../types/risk';
 
 interface ForecastSliderProps {
@@ -23,6 +24,7 @@ interface ForecastSliderProps {
   heatmapVisible: boolean;
   onToggleHeatmap: () => void;
   isLoading?: boolean;
+  heatmap?: HeatmapResponse | null;
 }
 
 const SLIDER_MARKS = [
@@ -46,6 +48,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
   heatmapVisible,
   onToggleHeatmap,
   isLoading = false,
+  heatmap,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const hourRef = useRef(currentHour);
@@ -53,6 +56,22 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
   useEffect(() => {
     hourRef.current = currentHour;
   }, [currentHour]);
+
+  // Compute peak risk along the corridor for each of the 49 hours
+  const hourRiskSummary = useMemo(() => {
+    if (!heatmap?.risk || heatmap.risk.length === 0) return [];
+    const hours = heatmap.hours || 49;
+    const summary: number[] = [];
+    for (let h = 0; h < hours; h++) {
+      let maxR = 0;
+      for (let i = 0; i < heatmap.risk.length; i++) {
+        const r = heatmap.risk[i]?.[h] ?? 0;
+        if (r > maxR) maxR = r;
+      }
+      summary.push(maxR);
+    }
+    return summary;
+  }, [heatmap]);
 
   // Play animation loop
   useEffect(() => {
@@ -180,6 +199,53 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
           </Tooltip>
         </Box>
       </Box>
+
+      {/* 48-Hour Corridor Weather Risk Sparkline */}
+      {hourRiskSummary.length > 0 && (
+        <Box sx={{ px: 1.5, mb: 0.5 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              height: 7,
+              borderRadius: '4px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              backgroundColor: '#EAECF0',
+              gap: '1px',
+            }}
+          >
+            {hourRiskSummary.map((risk, idx) => {
+              const spec = RISK_LEVELS[risk as RiskLevelOrdinal] ?? RISK_LEVELS[0];
+              const isSelected = idx === currentHour;
+              return (
+                <Tooltip
+                  key={idx}
+                  title={`+${idx}h (${dayjs(startTime).add(idx, 'hour').format('ddd h A')}): Corridor Risk ${spec.label}`}
+                  placement="top"
+                >
+                  <Box
+                    onClick={() => {
+                      setIsPlaying(false);
+                      onHourChange(idx);
+                    }}
+                    sx={{
+                      flex: 1,
+                      backgroundColor: risk === 0 ? '#E4E7EC' : spec.solid,
+                      opacity: isSelected ? 1.0 : 0.75,
+                      borderTop: isSelected ? '2px solid #1D2939' : 'none',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        opacity: 1.0,
+                        transform: 'scaleY(1.4)',
+                      },
+                    }}
+                  />
+                </Tooltip>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
 
       {/* Interactive 0-48h Slider */}
       <Box sx={{ px: 1.5, pt: 0.5 }}>

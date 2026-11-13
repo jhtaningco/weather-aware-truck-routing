@@ -1,8 +1,10 @@
+import AirOutlinedIcon from '@mui/icons-material/AirOutlined';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import NavigationOutlinedIcon from '@mui/icons-material/NavigationOutlined';
+import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined';
 import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { RouteOption } from '../../types/api';
 import { avgRiskToOrdinal } from '../../types/risk';
 import { formatAvgRisk, formatDistance, formatDuration, formatETA } from '../../utils/formatters';
@@ -25,6 +27,25 @@ export const RouteCard: React.FC<RouteCardProps> = ({
   accentColor = '#465FFF',
 }) => {
   const avgOrdinal = avgRiskToOrdinal(route.summary.avg_risk);
+
+  const weatherSummary = useMemo(() => {
+    if (!route.checkpoints || route.checkpoints.length === 0) return null;
+    let maxWind = 0;
+    let maxGust = 0;
+    let maxRain = 0;
+    let maxSnow = 0;
+    let hasLoadEscalation = false;
+
+    for (const cp of route.checkpoints) {
+      if (cp.weather.wind_mph > maxWind) maxWind = cp.weather.wind_mph;
+      if (cp.weather.gust_mph > maxGust) maxGust = cp.weather.gust_mph;
+      if (cp.weather.rain_in_hr > maxRain) maxRain = cp.weather.rain_in_hr;
+      if (cp.weather.snow_in_hr > maxSnow) maxSnow = cp.weather.snow_in_hr;
+      if (cp.risk.load_escalated) hasLoadEscalation = true;
+    }
+
+    return { maxWind, maxGust, maxRain, maxSnow, hasLoadEscalation };
+  }, [route.checkpoints]);
 
   return (
     <Paper
@@ -150,6 +171,71 @@ export const RouteCard: React.FC<RouteCardProps> = ({
             </Typography>
           </Box>
         </Box>
+
+        {/* Weather Highlights Row */}
+        {weatherSummary && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: 1.5,
+              py: 0.85,
+              borderRadius: '8px',
+              backgroundColor: '#F8F9FC',
+              border: '1px solid #EEF2F6',
+              flexWrap: 'wrap',
+              gap: 1,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+              <AirOutlinedIcon sx={{ fontSize: 15, color: weatherSummary.maxWind >= 35 ? '#F97316' : '#667085' }} />
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.72rem',
+                  color: weatherSummary.maxWind >= 35 ? '#B54708' : 'text.secondary',
+                  fontWeight: weatherSummary.maxWind >= 35 ? 600 : 500,
+                }}
+              >
+                Max Wind: {weatherSummary.maxWind.toFixed(0)} mph
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+              <WaterDropOutlinedIcon sx={{ fontSize: 14, color: weatherSummary.maxRain > 0 ? '#0BA5EC' : '#667085' }} />
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.72rem',
+                  color: weatherSummary.maxRain > 0 ? '#026AA2' : 'text.secondary',
+                  fontWeight: weatherSummary.maxRain > 0 ? 600 : 500,
+                }}
+              >
+                {weatherSummary.maxSnow > 0
+                  ? `${weatherSummary.maxSnow.toFixed(1)} in/hr snow`
+                  : weatherSummary.maxRain > 0
+                  ? `${weatherSummary.maxRain.toFixed(2)} in/hr rain`
+                  : 'Dry Conditions'}
+              </Typography>
+            </Box>
+
+            {weatherSummary.hasLoadEscalation && (
+              <Chip
+                label="Load Rule"
+                size="small"
+                sx={{
+                  height: 18,
+                  fontSize: '0.625rem',
+                  fontWeight: 600,
+                  bgcolor: '#FEF3F2',
+                  color: '#D92D20',
+                  border: '1px solid #FECDCA',
+                }}
+              />
+            )}
+          </Box>
+        )}
 
         {/* Average Risk & Risk Bar */}
         <Box>
