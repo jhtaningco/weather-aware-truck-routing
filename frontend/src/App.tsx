@@ -167,7 +167,10 @@ export default function App() {
             <Box
               sx={{
                 flex: 1,
-                minHeight: { xs: 500, md: 'auto' },
+                minHeight: { xs: 500, md: 'calc(100vh - 110px)' },
+                height: { xs: 550, md: 'calc(100vh - 110px)' },
+                position: { xs: 'static', md: 'sticky' },
+                top: 80,
                 display: 'flex',
                 flexDirection: 'column',
               }}
