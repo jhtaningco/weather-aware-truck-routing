@@ -9,7 +9,9 @@ import responses
 
 from planner.services.eta import interpolate_checkpoint_etas
 from planner.services.routing.base import RawRoute, RoutingProvider
+from planner.services.routing.fallback import FallbackRoutingProvider
 from planner.services.routing.ors import OpenRouteServiceRoutingProvider
+from planner.services.routing.osrm import OSRMRoutingProvider
 from planner.services.routing.route_set import (
     LayeredRouteService,
     are_routes_duplicates,
@@ -224,3 +226,63 @@ def test_full_pipeline_routes_sampling_etas():
     assert (etas[-1] - t_depart).total_seconds() == route.duration_seconds
     for i in range(len(etas) - 1):
         assert etas[i] < etas[i + 1]
+
+
+@responses.activate
+def test_osrm_provider_parses_routes_and_steps():
+    """Verify OSRMRoutingProvider parses OSRM response correctly."""
+    mock_osrm_data = {
+        "code": "Ok",
+        "routes": [
+            {
+                "distance": 160934.4,  # 100 miles in meters
+                "duration": 5400.0,
+                "geometry": {
+                    "coordinates": [[-96.7970, 32.7767], [-97.0, 33.0], [-104.9903, 39.7392]],
+                    "type": "LineString",
+                },
+                "legs": [
+                    {
+                        "distance": 160934.4,
+                        "duration": 5400.0,
+                        "steps": [
+                            {"distance": 80467.2, "duration": 2700.0},
+                            {"distance": 80467.2, "duration": 2700.0},
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    responses.add(
+        responses.GET,
+        "https://router.project-osrm.org/route/v1/driving/-96.797000,32.776700;-104.990300,39.739200?overview=full&geometries=geojson&steps=true&alternatives=false",
+        json=mock_osrm_data,
+        status=200,
+    )
+
+    provider = OSRMRoutingProvider()
+    routes = provider.get_routes((32.7767, -96.7970), (39.7392, -104.9903))
+
+    assert len(routes) == 1
+    assert routes[0].distance_miles == 100.0
+    assert routes[0].duration_seconds == 5400.0
+    assert len(routes[0].geometry) == 3
+    assert len(routes[0].steps) == 2
+    assert routes[0].steps[0].distance_miles == 50.0
+
+
+def test_fallback_routing_provider():
+    """FallbackRoutingProvider tries primary first, falling back on failure."""
+    primary_fail = MockRoutingProvider([])
+    primary_fail.get_routes = lambda *a, **kw: (_ for _ in ()).throw(ValueError("ORS failed"))
+
+    fallback_success = MockRoutingProvider([make_route("fb-1", [(30.0, -90.0), (31.0, -90.0)])])
+
+    composite = FallbackRoutingProvider(primary=primary_fail, fallback=fallback_success)
+    routes = composite.get_routes((30.0, -90.0), (31.0, -90.0))
+
+    assert len(routes) == 1
+    assert routes[0].route_id == "fb-1"
+

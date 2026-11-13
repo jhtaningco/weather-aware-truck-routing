@@ -136,3 +136,8 @@ On full ties, the original provider ordering is preserved.
 - To preserve zero-configuration local development and eliminate API key requirements, the basemap was updated to Esri World Light Gray Canvas (`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`) with a complementary reference labels overlay (`World_Light_Gray_Reference`).
 - Esri Light Gray Canvas is public, unmetered, requires zero API keys, renders no watermarks, and maintains the exact clean, minimalist, high-contrast aesthetic needed for weather risk overlays and route polylines.
 - Configured with `maxNativeZoom={16}` and `maxZoom={19}` to allow smooth tile scaling when users zoom in past level 16.
+
+## D-025: Zero-configuration keyless routing via OSRM fallback and Open-Meteo throughput optimization
+- When `ORS_API_KEY` is not configured or OpenRouteService encounters rate limits / downtime, `FallbackRoutingProvider` automatically delegates route generation to the Open Source Routing Machine (`OSRMRoutingProvider`, `https://router.project-osrm.org`).
+- This makes the entire application immediately usable and testable out of the box with zero third-party API key signups, while preserving OpenRouteService `driving-hgv` profile integration whenever an `ORS_API_KEY` is supplied.
+- Open-Meteo batch querying was optimized by adding a descriptive application `User-Agent` header (`WeatherAwareTruckRouting/1.0`), bounding forecasts with `forecast_days=3`, reducing chunk size to 20 coordinates, and pre-warming all sampled coordinates across the 3 route options in a single pass before checkpoint evaluation. This avoids redundant HTTP roundtrips and prevents Open-Meteo connection resets.

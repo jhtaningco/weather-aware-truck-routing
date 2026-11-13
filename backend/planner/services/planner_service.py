@@ -12,7 +12,9 @@ from .geometry import simplify_geometry
 from .recommend import RouteScore, rank_routes
 from .risk import assess_checkpoint
 from .routing.base import RoutingProvider
+from .routing.fallback import FallbackRoutingProvider
 from .routing.ors import OpenRouteServiceRoutingProvider
+from .routing.osrm import OSRMRoutingProvider
 from .routing.route_set import LayeredRouteService
 from .sampling import sample_checkpoints
 from .scoring import score_route
@@ -35,7 +37,11 @@ def generate_plan(
     # 1. Initialize providers
     if routing_provider is None:
         ors_key = getattr(settings, "ORS_API_KEY", "")
-        routing_provider = OpenRouteServiceRoutingProvider(api_key=ors_key)
+        primary_provider = OpenRouteServiceRoutingProvider(api_key=ors_key)
+        routing_provider = FallbackRoutingProvider(
+            primary=primary_provider,
+            fallback=OSRMRoutingProvider(),
+        )
 
     if weather_provider is None:
         weather_provider = OpenMeteoWeatherProvider()
@@ -59,8 +65,22 @@ def generate_plan(
     scored_routes_data: list[dict[str, Any]] = []
     route_scores_for_ranking: list[RouteScore] = []
 
-    for route in raw_routes:
-        samples = sample_checkpoints(route.geometry, interval_miles=float(interval_mi))
+    # Pre-sample checkpoints and pre-fetch weather in a single batched pass
+    route_samples = [
+        sample_checkpoints(route.geometry, interval_miles=float(interval_mi))
+        for route in raw_routes
+    ]
+    all_coords_to_fetch: list[Coordinate] = [
+        (s.lat, s.lon) for samples in route_samples for s in samples
+    ]
+    if hasattr(weather_provider, "get_hourly_series_batch"):
+        try:
+            weather_provider.get_hourly_series_batch(all_coords_to_fetch)
+        except Exception as exc:
+            logger.warning("Pre-fetching weather batch failed: %s", exc)
+
+    for idx, route in enumerate(raw_routes):
+        samples = route_samples[idx]
         sample_coords = [(s.lat, s.lon) for s in samples]
         sample_miles = [s.mile for s in samples]
 

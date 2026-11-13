@@ -14,8 +14,9 @@ from .base import CheckpointWeather, WeatherProvider
 logger = logging.getLogger(__name__)
 
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-BATCH_CHUNK_SIZE = 50
+BATCH_CHUNK_SIZE = 20
 WEATHER_CACHE_TTL = 3600  # 1 hour
+USER_AGENT = "WeatherAwareTruckRouting/1.0 (assessment@spotter.ai)"
 
 
 def _round_coord(coord: Coordinate) -> tuple[float, float]:
@@ -109,10 +110,14 @@ class OpenMeteoWeatherProvider(WeatherProvider):
                 "wind_speed_unit": "mph",
                 "precipitation_unit": "inch",
                 "timezone": "UTC",
+                "forecast_days": 3,
             }
+            headers = {"User-Agent": USER_AGENT}
 
             try:
-                resp = requests.get(self.base_url, params=params, timeout=self.timeout)
+                resp = requests.get(
+                    self.base_url, params=params, headers=headers, timeout=self.timeout
+                )
                 if resp.status_code == 200:
                     data = resp.json()
                     # Open-Meteo returns a list if multiple coordinates, or a single dict if one
