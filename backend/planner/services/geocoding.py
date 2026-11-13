@@ -1,5 +1,6 @@
 """Geocoding service with caching and provider fallback."""
 
+import hashlib
 import logging
 from typing import Any
 
@@ -36,7 +37,8 @@ def geocode_address(query: str, limit: int = 5) -> list[dict[str, Any]]:
     if not clean_query:
         return []
 
-    cache_key = f"geocode:{clean_query.lower()}:{limit}"
+    query_hash = hashlib.sha256(clean_query.lower().encode()).hexdigest()[:16]
+    cache_key = f"geocode:{query_hash}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached

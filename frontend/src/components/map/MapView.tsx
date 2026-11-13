@@ -52,6 +52,28 @@ export const MapView: React.FC<MapViewProps> = ({
           backgroundColor: '#F8FAFC',
           fontFamily: "'Outfit', sans-serif",
         },
+        '& .leaflet-control-zoom': {
+          border: 'none !important',
+          boxShadow: '0 4px 16px rgba(16, 24, 40, 0.12) !important',
+          borderRadius: '12px !important',
+          overflow: 'hidden',
+          mt: 2,
+          ml: 2,
+        },
+        '& .leaflet-control-zoom a': {
+          backgroundColor: '#FFFFFF !important',
+          color: '#344054 !important',
+          width: '34px !important',
+          height: '34px !important',
+          lineHeight: '34px !important',
+          fontSize: '18px !important',
+          borderBottom: '1px solid #F2F4F7 !important',
+          transition: 'all 0.15s ease',
+          '&:hover': {
+            backgroundColor: '#F8F9FA !important',
+            color: '#465FFF !important',
+          },
+        },
         '& .leaflet-popup-content-wrapper': {
           borderRadius: '12px',
           boxShadow: '0 8px 24px rgba(16, 24, 40, 0.15)',

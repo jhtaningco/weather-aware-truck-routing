@@ -68,7 +68,7 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const zoom = map.getZoom();
-    const radius = Math.max(16, Math.min(42, Math.round(18 * Math.pow(1.12, zoom - 6))));
+    const radius = Math.max(26, Math.min(65, Math.round(30 * Math.pow(1.15, zoom - 6))));
     const hourIdx = Math.max(0, Math.min(48, currentHour));
 
     for (let i = 0; i < heatmap.points.length; i++) {
@@ -93,10 +93,12 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
 
       const colorSpec = RISK_CANVAS_COLORS[riskLevel] ?? RISK_CANVAS_COLORS[1]!;
 
+      // Multi-stop radial gradient for soft atmospheric cloud falloff
       const gradient = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius);
       gradient.addColorStop(0, colorSpec.core);
-      gradient.addColorStop(0.65, colorSpec.core.replace(/[\d.]+\)$/, '0.18)'));
-      gradient.addColorStop(1, colorSpec.edge);
+      gradient.addColorStop(0.4, colorSpec.core.replace(/[\d.]+\)$/, '0.24)'));
+      gradient.addColorStop(0.75, colorSpec.core.replace(/[\d.]+\)$/, '0.08)'));
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
@@ -119,6 +121,9 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     canvas.style.top = '0';
     canvas.style.left = '0';
     canvas.style.pointerEvents = 'none';
+    // Smooth atmospheric blur filter blending discrete points into a Doppler weather front
+    canvas.style.filter = 'blur(10px)';
+    canvas.style.transition = 'opacity 0.2s ease';
 
     pane.appendChild(canvas);
     canvasRef.current = canvas;
