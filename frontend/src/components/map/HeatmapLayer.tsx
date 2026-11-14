@@ -10,28 +10,28 @@ interface HeatmapLayerProps {
 }
 
 // Exact risk colors for atmospheric weather hazard halos.
-// Risk 0 (Low / Calm) is transparent: safe clear conditions do NOT cover the highways with green paint.
-// Only active weather hazards (Moderate = Yellow, High = Orange, Severe = Red, No Travel = Maroon) glow.
-const RISK_CANVAS_COLORS: Record<number, { core: string; edge: string }> = {
+// Risk 0 (Low / Calm) is a soft translucent green aura showing the safe corridor baseline.
+// Active weather hazards (Moderate = Yellow, High = Orange, Severe = Red, No Travel = Maroon) glow vividly.
+const RISK_CANVAS_COLORS: Record<number, { core: string; mid: string }> = {
   0: {
-    core: 'rgba(18, 183, 106, 0.0)', // Calm / clear baseline (transparent)
-    edge: 'rgba(18, 183, 106, 0.0)',
+    core: 'rgba(34, 197, 94, 0.22)', // Low / Calm (soft atmospheric green corridor baseline)
+    mid: 'rgba(34, 197, 94, 0.08)',
   },
   1: {
-    core: 'rgba(253, 176, 34, 0.40)', // Moderate (Yellow/Amber)
-    edge: 'rgba(253, 176, 34, 0.0)',
+    core: 'rgba(234, 179, 8, 0.50)', // Moderate (Yellow/Amber)
+    mid: 'rgba(234, 179, 8, 0.20)',
   },
   2: {
-    core: 'rgba(249, 115, 22, 0.55)', // High (Orange)
-    edge: 'rgba(249, 115, 22, 0.0)',
+    core: 'rgba(249, 115, 22, 0.65)', // High (Vibrant Orange)
+    mid: 'rgba(249, 115, 22, 0.28)',
   },
   3: {
-    core: 'rgba(217, 45, 32, 0.70)', // Severe (Red)
-    edge: 'rgba(217, 45, 32, 0.0)',
+    core: 'rgba(239, 68, 68, 0.80)', // Severe (Intense Red)
+    mid: 'rgba(239, 68, 68, 0.35)',
   },
   4: {
-    core: 'rgba(122, 31, 31, 0.85)', // No Travel (Deep Crimson)
-    edge: 'rgba(122, 31, 31, 0.0)',
+    core: 'rgba(159, 18, 57, 0.90)', // No Travel (Deep Crimson)
+    mid: 'rgba(159, 18, 57, 0.40)',
   },
 };
 
@@ -68,7 +68,7 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const zoom = map.getZoom();
-    const radius = Math.max(26, Math.min(65, Math.round(30 * Math.pow(1.15, zoom - 6))));
+    const baseRadius = Math.max(28, Math.min(65, Math.round(32 * Math.pow(1.15, zoom - 6))));
     const hourIdx = Math.max(0, Math.min(48, currentHour));
 
     for (let i = 0; i < heatmap.points.length; i++) {
@@ -76,11 +76,11 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
       if (!ptCoords) continue;
 
       const riskLevel = heatmap.risk[i]?.[hourIdx] ?? 0;
-      // Skip Risk 0 (calm / safe baseline): clear weather leaves roads and basemap crisp & clear
-      if (riskLevel === 0) continue;
-
       const [lat, lon] = ptCoords;
       const pt = map.latLngToContainerPoint([lat, lon]);
+
+      // Active weather hazards (Moderate/High/Severe) get a broader aura to represent storm fronts
+      const radius = riskLevel > 0 ? Math.round(baseRadius * 1.3) : baseRadius;
 
       if (
         pt.x < -radius ||
@@ -91,13 +91,13 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
         continue;
       }
 
-      const colorSpec = RISK_CANVAS_COLORS[riskLevel] ?? RISK_CANVAS_COLORS[1]!;
+      const colorSpec = RISK_CANVAS_COLORS[riskLevel] ?? RISK_CANVAS_COLORS[0]!;
 
       // Multi-stop radial gradient for soft atmospheric cloud falloff
       const gradient = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius);
       gradient.addColorStop(0, colorSpec.core);
-      gradient.addColorStop(0.4, colorSpec.core.replace(/[\d.]+\)$/, '0.24)'));
-      gradient.addColorStop(0.75, colorSpec.core.replace(/[\d.]+\)$/, '0.08)'));
+      gradient.addColorStop(0.45, colorSpec.mid);
+      gradient.addColorStop(0.8, colorSpec.mid.replace(/[\d.]+\)$/, '0.03)'));
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       ctx.fillStyle = gradient;

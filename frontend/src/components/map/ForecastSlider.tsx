@@ -158,7 +158,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
               {formattedTime}
             </Typography>
             <Chip
-              label={currentHour === 0 ? 'Departure' : `+${currentHour}h forecast`}
+              label={currentHour === 0 ? 'Departure' : `+${currentHour}h`}
               size="small"
               sx={{
                 height: 20,
@@ -168,6 +168,31 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
                 color: currentHour === 0 ? '#12B76A' : 'primary.main',
               }}
             />
+            {/* Live Corridor Status Badge */}
+            {(() => {
+              const currentPeakRisk = hourRiskSummary[currentHour] ?? 0;
+              const statusConfig: Record<number, { text: string; bg: string; color: string }> = {
+                0: { text: 'Clear / Low Risk', bg: '#ECFDF3', color: '#027A48' },
+                1: { text: 'Moderate Weather', bg: '#FEF0C7', color: '#B54708' },
+                2: { text: 'High Crosswind', bg: '#FFEDD5', color: '#C2410C' },
+                3: { text: 'Severe Weather', bg: '#FEE4E2', color: '#B42318' },
+                4: { text: '🛑 No-Travel Storm', bg: '#FEF3F2', color: '#912018' },
+              };
+              const conf = statusConfig[currentPeakRisk] ?? statusConfig[0]!;
+              return (
+                <Chip
+                  label={conf.text}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.675rem',
+                    fontWeight: 600,
+                    bgcolor: conf.bg,
+                    color: conf.color,
+                  }}
+                />
+              );
+            })()}
           </Box>
         </Box>
 
@@ -281,6 +306,11 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
           }}
         />
       </Box>
+
+      {/* Helper animation prompt */}
+      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.675rem', fontStyle: 'italic', display: 'block', textAlign: 'center', mb: 0.5 }}>
+        💡 Click ▶️ Play or drag slider to animate weather radar through the 48-hour corridor
+      </Typography>
 
       {/* Heatmap Mini Legend */}
       <Box
