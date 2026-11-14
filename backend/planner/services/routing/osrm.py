@@ -13,8 +13,8 @@ from .base import RawRoute, RoutingProvider
 logger = logging.getLogger(__name__)
 
 OSRM_ROUTING_URL = "https://router.project-osrm.org/route/v1/driving"
-MAX_RETRIES = 3
-BACKOFF_FACTOR = 1.0
+MAX_RETRIES = 2
+BACKOFF_FACTOR = 0.5
 
 
 class OSRMRoutingProvider(RoutingProvider):
@@ -63,7 +63,7 @@ class OSRMRoutingProvider(RoutingProvider):
 
         for attempt in range(MAX_RETRIES):
             try:
-                resp = requests.get(url, headers=headers, timeout=15)
+                resp = requests.get(url, headers=headers, timeout=5)
                 if resp.status_code == 200:
                     return resp.json()
                 if resp.status_code in {429, 502, 503, 504}:

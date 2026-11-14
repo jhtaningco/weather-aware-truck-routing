@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from typing import Any
 
@@ -37,7 +38,7 @@ def _parse_utc_iso(time_str: str) -> datetime:
 class OpenMeteoWeatherProvider(WeatherProvider):
     """Weather provider implementation backed by Open-Meteo free API."""
 
-    def __init__(self, base_url: str = OPEN_METEO_FORECAST_URL, timeout: int = 15):
+    def __init__(self, base_url: str = OPEN_METEO_FORECAST_URL, timeout: int = 5):
         self.base_url = base_url
         self.timeout = timeout
 
@@ -92,44 +93,69 @@ class OpenMeteoWeatherProvider(WeatherProvider):
 
         return results
 
+    def _fetch_single_chunk(
+        self, chunk: list[tuple[float, float]]
+    ) -> dict[tuple[float, float], dict[str, list]]:
+        """Fetch a single chunk of up to BATCH_CHUNK_SIZE coordinates."""
+        chunk_results: dict[tuple[float, float], dict[str, list]] = {}
+        lats = ",".join(str(c[0]) for c in chunk)
+        lons = ",".join(str(c[1]) for c in chunk)
+
+        params = {
+            "latitude": lats,
+            "longitude": lons,
+            "hourly": "wind_speed_10m,wind_gusts_10m,rain,showers,snowfall",
+            "wind_speed_unit": "mph",
+            "precipitation_unit": "inch",
+            "timezone": "UTC",
+            "forecast_days": 3,
+        }
+        headers = {"User-Agent": USER_AGENT}
+
+        try:
+            resp = requests.get(
+                self.base_url, params=params, headers=headers, timeout=self.timeout
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                data_list = data if isinstance(data, list) else [data]
+                for idx, item in enumerate(data_list):
+                    if idx < len(chunk):
+                        coord = chunk[idx]
+                        chunk_results[coord] = self._normalize_hourly(item.get("hourly", {}))
+            else:
+                logger.warning("Open-Meteo returned status %d: %s", resp.status_code, resp.text)
+        except Exception as exc:
+            logger.warning("Open-Meteo request failed: %s", exc)
+
+        return chunk_results
+
     def _fetch_batches(
         self, coords: list[tuple[float, float]]
     ) -> dict[tuple[float, float], dict[str, list]]:
-        """Fetch hourly weather series from Open-Meteo in batched requests."""
+        """Fetch hourly weather series from Open-Meteo concurrently in parallel chunks."""
+        chunks = [
+            coords[i : i + BATCH_CHUNK_SIZE]
+            for i in range(0, len(coords), BATCH_CHUNK_SIZE)
+        ]
+        if not chunks:
+            return {}
+        if len(chunks) == 1:
+            return self._fetch_single_chunk(chunks[0])
+
         results: dict[tuple[float, float], dict[str, list]] = {}
-
-        for i in range(0, len(coords), BATCH_CHUNK_SIZE):
-            chunk = coords[i : i + BATCH_CHUNK_SIZE]
-            lats = ",".join(str(c[0]) for c in chunk)
-            lons = ",".join(str(c[1]) for c in chunk)
-
-            params = {
-                "latitude": lats,
-                "longitude": lons,
-                "hourly": "wind_speed_10m,wind_gusts_10m,rain,showers,snowfall",
-                "wind_speed_unit": "mph",
-                "precipitation_unit": "inch",
-                "timezone": "UTC",
-                "forecast_days": 3,
+        max_workers = min(len(chunks), 6)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_chunk = {
+                executor.submit(self._fetch_single_chunk, chunk): chunk
+                for chunk in chunks
             }
-            headers = {"User-Agent": USER_AGENT}
-
-            try:
-                resp = requests.get(
-                    self.base_url, params=params, headers=headers, timeout=self.timeout
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    # Open-Meteo returns a list if multiple coordinates, or a single dict if one
-                    data_list = data if isinstance(data, list) else [data]
-                    for idx, item in enumerate(data_list):
-                        if idx < len(chunk):
-                            coord = chunk[idx]
-                            results[coord] = self._normalize_hourly(item.get("hourly", {}))
-                else:
-                    logger.warning("Open-Meteo returned status %d: %s", resp.status_code, resp.text)
-            except Exception as exc:
-                logger.warning("Open-Meteo request failed: %s", exc)
+            for future in as_completed(future_to_chunk):
+                try:
+                    chunk_data = future.result()
+                    results.update(chunk_data)
+                except Exception as exc:
+                    logger.warning("Chunk fetch exception: %s", exc)
 
         return results
 

@@ -12,8 +12,8 @@ from .geometry import (
 from .risk import assess_checkpoint
 from .weather.open_meteo import OpenMeteoWeatherProvider
 
-MAX_GRID_POINTS = 100
-GRID_SAMPLING_INTERVAL_MILES = 30.0
+MAX_GRID_POINTS = 60
+GRID_SAMPLING_INTERVAL_MILES = 35.0
 OFFSET_DISTANCE_MILES = 15.0
 
 
