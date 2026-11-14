@@ -172,11 +172,11 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
             {(() => {
               const currentPeakRisk = hourRiskSummary[currentHour] ?? 0;
               const statusConfig: Record<number, { text: string; bg: string; color: string }> = {
-                0: { text: 'Clear / Low Risk', bg: '#ECFDF3', color: '#027A48' },
-                1: { text: 'Moderate Weather', bg: '#FEF0C7', color: '#B54708' },
-                2: { text: 'High Crosswind', bg: '#FFEDD5', color: '#C2410C' },
-                3: { text: 'Severe Weather', bg: '#FEE4E2', color: '#B42318' },
-                4: { text: '🛑 No-Travel Storm', bg: '#FEF3F2', color: '#912018' },
+                0: { text: '☀️ Clear Skies (No Hazards)', bg: '#ECFDF3', color: '#027A48' },
+                1: { text: '🟡 Moderate Radar Active', bg: '#FEF0C7', color: '#B54708' },
+                2: { text: '🟠 High Crosswinds Hazard', bg: '#FFEDD5', color: '#C2410C' },
+                3: { text: '🔴 Severe Storm Front', bg: '#FEE4E2', color: '#B42318' },
+                4: { text: '🛑 No-Travel Blizzard / Gale', bg: '#FDF2F8', color: '#9333EA' },
               };
               const conf = statusConfig[currentPeakRisk] ?? statusConfig[0]!;
               return (
@@ -308,8 +308,19 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
       </Box>
 
       {/* Helper animation prompt */}
-      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.675rem', fontStyle: 'italic', display: 'block', textAlign: 'center', mb: 0.5 }}>
-        💡 Click ▶️ Play or drag slider to animate weather radar through the 48-hour corridor
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+          fontSize: '0.675rem',
+          display: 'block',
+          textAlign: 'center',
+          mb: 0.5,
+        }}
+      >
+        {hourRiskSummary.some((r) => r > 0)
+          ? '⚡ Radar layer active: storm fronts develop ahead. Click ▶️ Play or drag slider to animate weather.'
+          : '☀️ All clear: 0 hazards forecast across the corridor for the next 48 hours.'}
       </Typography>
 
       {/* Heatmap Mini Legend */}
@@ -326,9 +337,23 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
         }}
       >
         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.675rem', fontWeight: 600 }}>
-          Heatmap Risk:
+          Radar Legend:
         </Typography>
-        {ORDINAL_LIST.map((ord) => {
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              border: '1.5px solid #12B76A',
+              bgcolor: 'transparent',
+            }}
+          />
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.675rem' }}>
+            Clear (Clean)
+          </Typography>
+        </Box>
+        {ORDINAL_LIST.filter((ord) => ord > 0).map((ord) => {
           const spec = RISK_LEVELS[ord];
           return (
             <Box key={ord} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
@@ -337,7 +362,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  bgcolor: spec.solid,
+                  bgcolor: ord === 4 ? '#9333EA' : spec.solid,
                 }}
               />
               <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.675rem' }}>

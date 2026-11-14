@@ -9,29 +9,25 @@ interface HeatmapLayerProps {
   visible: boolean;
 }
 
-// Exact risk colors for atmospheric weather hazard halos.
-// Risk 0 (Low / Calm) is a soft translucent green aura showing the safe corridor baseline.
-// Active weather hazards (Moderate = Yellow, High = Orange, Severe = Red, No Travel = Maroon) glow vividly.
+// Authentic Doppler weather radar hazard colors (NEXRAD / Windy / Apple Weather palette).
+// Risk 0 (Clear Skies) is 100% transparent: sunny conditions never cover roads with green paint.
+// Only active hazards (Moderate = Yellow, High = Orange, Severe = Red, No Travel = Deep Violet) render as solid storm fronts.
 const RISK_CANVAS_COLORS: Record<number, { core: string; mid: string }> = {
-  0: {
-    core: 'rgba(34, 197, 94, 0.22)', // Low / Calm (soft atmospheric green corridor baseline)
-    mid: 'rgba(34, 197, 94, 0.08)',
-  },
   1: {
-    core: 'rgba(234, 179, 8, 0.50)', // Moderate (Yellow/Amber)
-    mid: 'rgba(234, 179, 8, 0.20)',
+    core: 'rgba(250, 204, 21, 0.75)', // Moderate (Golden Yellow radar)
+    mid: 'rgba(250, 204, 21, 0.40)',
   },
   2: {
-    core: 'rgba(249, 115, 22, 0.65)', // High (Vibrant Orange)
-    mid: 'rgba(249, 115, 22, 0.28)',
+    core: 'rgba(249, 115, 22, 0.85)', // High (Vivid Orange storm cell)
+    mid: 'rgba(249, 115, 22, 0.48)',
   },
   3: {
-    core: 'rgba(239, 68, 68, 0.80)', // Severe (Intense Red)
-    mid: 'rgba(239, 68, 68, 0.35)',
+    core: 'rgba(220, 38, 38, 0.92)', // Severe (Intense Doppler Red front)
+    mid: 'rgba(220, 38, 38, 0.55)',
   },
   4: {
-    core: 'rgba(159, 18, 57, 0.90)', // No Travel (Deep Crimson)
-    mid: 'rgba(159, 18, 57, 0.40)',
+    core: 'rgba(147, 51, 234, 0.96)', // No Travel (Deep Violet / Purple extreme hazard)
+    mid: 'rgba(147, 51, 234, 0.60)',
   },
 };
 
@@ -68,7 +64,6 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const zoom = map.getZoom();
-    const baseRadius = Math.max(28, Math.min(65, Math.round(32 * Math.pow(1.15, zoom - 6))));
     const hourIdx = Math.max(0, Math.min(48, currentHour));
 
     for (let i = 0; i < heatmap.points.length; i++) {
@@ -76,11 +71,18 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
       if (!ptCoords) continue;
 
       const riskLevel = heatmap.risk[i]?.[hourIdx] ?? 0;
+      // Clear skies (Risk 0) are 100% clean & transparent: zero green slug or powder over highways
+      if (riskLevel === 0) continue;
+
       const [lat, lon] = ptCoords;
       const pt = map.latLngToContainerPoint([lat, lon]);
 
-      // Active weather hazards (Moderate/High/Severe) get a broader aura to represent storm fronts
-      const radius = riskLevel > 0 ? Math.round(baseRadius * 1.3) : baseRadius;
+      // Geographic radius calculation: maintain real physical footprint (~50 miles)
+      // so adjacent cells continuously overlap and NEVER disperse into isolated dots when zoomed in
+      const metersPerPixel =
+        (40075016.686 * Math.abs(Math.cos((lat * Math.PI) / 180))) / Math.pow(2, zoom + 8);
+      const stormFootprintMeters = 80000; // ~50 miles physical radius for regional storm cells
+      const radius = Math.max(35, Math.round(stormFootprintMeters / Math.max(metersPerPixel, 0.1)));
 
       if (
         pt.x < -radius ||
@@ -91,13 +93,14 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
         continue;
       }
 
-      const colorSpec = RISK_CANVAS_COLORS[riskLevel] ?? RISK_CANVAS_COLORS[0]!;
+      const colorSpec = RISK_CANVAS_COLORS[riskLevel];
+      if (!colorSpec) continue;
 
-      // Multi-stop radial gradient for soft atmospheric cloud falloff
+      // Smooth Doppler radar cloud gradient: solid core with soft atmospheric perimeter falloff
       const gradient = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius);
       gradient.addColorStop(0, colorSpec.core);
-      gradient.addColorStop(0.45, colorSpec.mid);
-      gradient.addColorStop(0.8, colorSpec.mid.replace(/[\d.]+\)$/, '0.03)'));
+      gradient.addColorStop(0.55, colorSpec.mid);
+      gradient.addColorStop(0.85, colorSpec.mid.replace(/[\d.]+\)$/, '0.08)'));
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       ctx.fillStyle = gradient;
@@ -122,7 +125,8 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     canvas.style.left = '0';
     canvas.style.pointerEvents = 'none';
     // Smooth atmospheric blur filter blending discrete points into a Doppler weather front
-    canvas.style.filter = 'blur(10px)';
+    canvas.style.filter = 'blur(12px)';
+    canvas.style.opacity = '0.82';
     canvas.style.transition = 'opacity 0.2s ease';
 
     pane.appendChild(canvas);
