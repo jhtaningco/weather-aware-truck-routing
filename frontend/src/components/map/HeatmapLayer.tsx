@@ -12,11 +12,10 @@ interface HeatmapLayerProps {
 interface RadarBand {
   radiusRatio: number; // fraction of full storm cell radius
   fill: string;        // stepped radar reflectivity fill
-  stroke?: string;     // crisp 1px radar contour perimeter
 }
 
 // Authentic Doppler Weather Radar Reflectivity Palette (NOAA / NEXRAD Level 3 / RadarOmega style).
-// Discrete stepped contour bands (dBZ thresholds) with crisp cell perimeters and zero cosmetic blur:
+// Discrete stepped contour bands (dBZ thresholds) with zero cosmetic blur and zero target strokes:
 // - Risk 0 (Clear Skies): 100% transparent: highways and basemap remain pristine and clean.
 // - Risk 1 (Moderate): Golden Yellow reflectivity halo + Gold core (dBZ 25-35).
 // - Risk 2 (High / Crosswinds): Amber fringe + Vivid Radar Orange body + Crimson Red core (dBZ 35-50).
@@ -27,73 +26,60 @@ const RADAR_TIERS: Record<number, RadarBand[]> = {
     {
       radiusRatio: 1.0,
       fill: 'rgba(250, 204, 21, 0.35)', // Golden Yellow outer reflectivity
-      stroke: 'rgba(234, 179, 8, 0.60)',
     },
     {
       radiusRatio: 0.55,
       fill: 'rgba(234, 179, 8, 0.75)', // Solid Gold moderate core
-      stroke: 'rgba(202, 138, 4, 0.75)',
     },
   ],
   2: [
     {
       radiusRatio: 1.0,
       fill: 'rgba(251, 191, 36, 0.35)', // Amber / Warm Gold fringe
-      stroke: 'rgba(245, 158, 11, 0.55)',
     },
     {
       radiusRatio: 0.65,
       fill: 'rgba(249, 115, 22, 0.74)', // Vivid Radar Orange storm body
-      stroke: 'rgba(234, 88, 12, 0.72)',
     },
     {
       radiusRatio: 0.34,
       fill: 'rgba(220, 38, 38, 0.88)', // Deep Crimson severe center
-      stroke: 'rgba(185, 28, 28, 0.85)',
     },
   ],
   3: [
     {
       radiusRatio: 1.0,
       fill: 'rgba(249, 115, 22, 0.38)', // Radar Orange fringe
-      stroke: 'rgba(234, 88, 12, 0.60)',
     },
     {
       radiusRatio: 0.70,
       fill: 'rgba(220, 38, 38, 0.78)', // Intense Crimson storm body
-      stroke: 'rgba(185, 28, 28, 0.80)',
     },
     {
       radiusRatio: 0.42,
       fill: 'rgba(153, 27, 27, 0.90)', // Dark Burgundy severe core
-      stroke: 'rgba(127, 29, 29, 0.90)',
     },
     {
       radiusRatio: 0.20,
       fill: 'rgba(217, 70, 239, 0.95)', // Electric Magenta peak
-      stroke: 'rgba(168, 85, 247, 0.92)',
     },
   ],
   4: [
     {
       radiusRatio: 1.0,
       fill: 'rgba(220, 38, 38, 0.42)', // Deep Crimson fringe
-      stroke: 'rgba(185, 28, 28, 0.65)',
     },
     {
       radiusRatio: 0.72,
       fill: 'rgba(147, 51, 234, 0.82)', // Deep Violet / Purple storm body
-      stroke: 'rgba(126, 34, 206, 0.85)',
     },
     {
       radiusRatio: 0.44,
       fill: 'rgba(192, 38, 211, 0.92)', // Vivid Fuchsia core
-      stroke: 'rgba(162, 28, 175, 0.92)',
     },
     {
       radiusRatio: 0.22,
       fill: 'rgba(250, 232, 255, 0.98)', // White-Violet Supercell eye
-      stroke: 'rgba(216, 180, 254, 0.95)',
     },
   ],
 };
@@ -186,7 +172,7 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     // Pass 1: Mid storm bodies (solid radar orange / gold reflectivity)
     // Pass 2: Severe cores (crimson red / burgundy centers)
     // Pass 3: Peak supercell eyes (magenta / white-hot peaks)
-    // Each pass draws crisp stepped contour boundaries with 1px radar perimeter strokes.
+    // Solid stepped reflectivity bands without pen strokes for clean, authentic meteorological radar.
     for (let pass = 0; pass < MAX_RADAR_PASSES; pass++) {
       for (const cell of activeCells) {
         const band = RADAR_TIERS[cell.riskLevel]?.[pass];
@@ -197,12 +183,6 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
         ctx.beginPath();
         ctx.arc(cell.x, cell.y, bandRadius, 0, Math.PI * 2);
         ctx.fill();
-
-        if (band.stroke) {
-          ctx.strokeStyle = band.stroke;
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
       }
     }
   }, [map, visible, heatmap, currentHour]);
@@ -221,9 +201,9 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     canvas.style.top = '0';
     canvas.style.left = '0';
     canvas.style.pointerEvents = 'none';
-    // Absolutely zero blur: authentic digital Doppler weather radar with crisp stepped contour edges
+    // Clean digital Doppler weather radar with stepped reflectivity fills
     canvas.style.filter = 'none';
-    canvas.style.opacity = '0.86';
+    canvas.style.opacity = '0.82';
     canvas.style.transition = 'opacity 0.2s ease';
 
     pane.appendChild(canvas);
