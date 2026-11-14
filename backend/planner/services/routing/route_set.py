@@ -3,6 +3,8 @@
 import logging
 from collections.abc import Sequence
 
+from django.core.cache import cache
+
 from ..geometry import (
     Coordinate,
     haversine_distance_miles,
@@ -76,12 +78,25 @@ class LayeredRouteService:
         destination: Coordinate,
         load_lb: float = 0.0,
     ) -> tuple[list[RawRoute], str | None]:
-        """Generate up to 3 distinct routes using the 4-layer strategy.
+        """Generate up to 3 distinct routes using the 4-layer strategy with 24h caching.
 
         Returns:
             (routes, note_if_fewer_than_3)
         """
+        cache_key = (
+            f"routes:{round(origin[0], 3)}:{round(origin[1], 3)}:"
+            f"{round(destination[0], 3)}:{round(destination[1], 3)}"
+        )
+        cached_routes = cache.get(cache_key)
+        if cached_routes is not None:
+            return cached_routes
+
         accepted: list[RawRoute] = []
+
+        def _finish(res_routes: list[RawRoute], note_str: str | None) -> tuple[list[RawRoute], str | None]:
+            result = (self._finalize(res_routes), note_str)
+            cache.set(cache_key, result, timeout=86400)
+            return result
 
         def _try_add(candidate: RawRoute) -> bool:
             if not candidate.geometry or candidate.distance_miles <= 0:
@@ -100,7 +115,7 @@ class LayeredRouteService:
             for r in native_routes:
                 _try_add(r)
                 if len(accepted) >= 3:
-                    return self._finalize(accepted), None
+                    return _finish(accepted, None)
         except Exception as exc:
             logger.warning("Layer 1 (native alternatives) failed: %s", exc)
 
@@ -115,7 +130,7 @@ class LayeredRouteService:
                 for r in pref_routes:
                     _try_add(r)
                     if len(accepted) >= 3:
-                        return self._finalize(accepted), None
+                        return _finish(accepted, None)
             except Exception as exc:
                 logger.warning("Layer 2 (pref=%s) failed: %s", pref, exc)
 
@@ -134,7 +149,7 @@ class LayeredRouteService:
                     for r in detour_routes:
                         _try_add(r)
                         if len(accepted) >= 3:
-                            return self._finalize(accepted), None
+                            return _finish(accepted, None)
             except Exception as exc:
                 logger.warning("Layer 3 (detour waypoints) failed: %s", exc)
 
@@ -142,7 +157,7 @@ class LayeredRouteService:
         if len(accepted) < 3:
             note = f"Found {len(accepted)} distinct route(s) for this corridor."
 
-        return self._finalize(accepted), note
+        return _finish(accepted, note)
 
     def _finalize(self, routes: list[RawRoute]) -> list[RawRoute]:
         """Relabel routes neatly as Route A, Route B, Route C with consistent IDs."""
