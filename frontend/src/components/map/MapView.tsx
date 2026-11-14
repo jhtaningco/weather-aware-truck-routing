@@ -11,6 +11,7 @@ import { MapBoundsController } from './MapBoundsController';
 import { MapLegend } from './MapLegend';
 import { RecenterButton } from './RecenterButton';
 import { RouteLayers } from './RouteLayers';
+import { TruckMarker } from './TruckMarker';
 import { WaypointMarkers } from './WaypointMarkers';
 
 interface MapViewProps {
@@ -137,6 +138,13 @@ export const MapView: React.FC<MapViewProps> = ({
 
             <CheckpointMarkers
               selectedRoute={selectedRoute}
+              loadLb={plan.inputs.load_lb}
+            />
+
+            <TruckMarker
+              route={selectedRoute}
+              currentHour={forecastHour}
+              departAt={plan.inputs.depart_at}
               loadLb={plan.inputs.load_lb}
             />
 

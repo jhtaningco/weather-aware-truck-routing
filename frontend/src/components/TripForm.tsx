@@ -50,7 +50,7 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
   const [destLoading, setDestLoading] = useState(false);
 
   const [departTime, setDepartTime] = useState<Dayjs | null>(dayjs().add(2, 'hour'));
-  const [loadLb, setLoadLb] = useState<number>(35000);
+  const [loadLb, setLoadLb] = useState<number | ''>(35000);
   const [intervalMi, setIntervalMi] = useState<10 | 25 | 50>(25);
 
   // Debounced geocoding for Origin
@@ -117,7 +117,7 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
       origin,
       destination,
       depart_at: departTime.toISOString(),
-      load_lb: Number(loadLb) || 0,
+      load_lb: typeof loadLb === 'number' ? loadLb : Number(loadLb) || 0,
       interval_mi: intervalMi,
     });
   };
@@ -133,8 +133,10 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
     Boolean(destination) &&
     Boolean(departTime) &&
     !isSameLocation &&
-    loadLb >= 0 &&
-    loadLb <= 120000;
+    loadLb !== '' &&
+    !Number.isNaN(Number(loadLb)) &&
+    Number(loadLb) >= 0 &&
+    Number(loadLb) <= 120000;
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
@@ -271,7 +273,16 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
           label="Gross Vehicle / Load Weight"
           type="number"
           value={loadLb}
-          onChange={(e) => setLoadLb(Number(e.target.value))}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '') {
+              setLoadLb('');
+            } else {
+              const num = Number(val);
+              setLoadLb(Number.isNaN(num) ? '' : num);
+            }
+          }}
+          onFocus={(e) => e.target.select()}
           fullWidth
           required
           helperText="Load rules escalate wind risk at >30k lb and >40k lb."
@@ -316,13 +327,46 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
           size="large"
           disabled={!isFormValid || isLoading}
           fullWidth
-          sx={{ height: 48, mt: 1 }}
+          sx={{
+            height: 48,
+            mt: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           {isLoading ? (
-            <Stack sx={{ flexDirection: 'row', alignItems: 'center' }} spacing={1.5}>
-              <CircularProgress size={20} color="inherit" />
-              <span>Analyzing Weather & Routes...</span>
-            </Stack>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1.5,
+                lineHeight: 1,
+              }}
+            >
+              <CircularProgress
+                size={18}
+                color="inherit"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              />
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: 'inherit',
+                  fontWeight: 'inherit',
+                  lineHeight: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+              >
+                Analyzing Weather & Routes...
+              </Typography>
+            </Box>
           ) : (
             'Find Safest Route'
           )}

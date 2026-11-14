@@ -35,9 +35,12 @@ export function createCheckpointPopupHtml(
         </span>
       </div>
 
-      <!-- ETA -->
-      <div style="font-size: 11.5px; color: #475467; margin-bottom: 8px;">
-        <strong>Est. Arrival:</strong> ${etaFormatted}
+      <!-- ETA & Arrival Context -->
+      <div style="background: #F8FAFC; border: 1px solid #EAECF0; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
+        <span style="color: #667085; display: block; font-size: 10px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px;">
+          🚚 Truck Arrival ETA:
+        </span>
+        <strong style="color: #1D2939; font-size: 12px;">${etaFormatted}</strong>
       </div>
 
       <!-- Weather Grid -->
