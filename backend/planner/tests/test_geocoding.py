@@ -1,5 +1,6 @@
 """Tests for geocoding service and /api/geocode endpoint."""
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -53,7 +54,8 @@ def test_geocode_fallback_offline():
 def test_geocode_caching():
     results1 = geocode_address("Chicago")
     # Verify cached
-    cache_key = "geocode:chicago:5"
+    query_hash = hashlib.sha256("chicago".encode()).hexdigest()[:16]
+    cache_key = f"geocode:{query_hash}:5"
     assert cache.get(cache_key) == results1
 
     # Second call returns from cache
