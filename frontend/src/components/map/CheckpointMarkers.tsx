@@ -17,8 +17,15 @@ export const CheckpointMarkers: React.FC<CheckpointMarkersProps> = ({
   const map = useMap();
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
 
-  // Initialize LayerGroup on map once
+  // Initialize LayerGroup on map once with dedicated high z-index pane (550)
+  // Ensures checkpoint circles are ALWAYS rendered above route polylines (zIndex 400)
   useEffect(() => {
+    let pane = map.getPane('checkpointPane');
+    if (!pane) {
+      pane = map.createPane('checkpointPane');
+      pane.style.zIndex = '550';
+    }
+
     const group = L.layerGroup().addTo(map);
     layerGroupRef.current = group;
 
@@ -40,27 +47,36 @@ export const CheckpointMarkers: React.FC<CheckpointMarkersProps> = ({
       const spec = RISK_LEVELS[cp.risk.level] ?? RISK_LEVELS[0];
 
       const marker = L.circleMarker([cp.lat, cp.lon], {
-        radius: 6.5,
+        pane: 'checkpointPane',
+        radius: 7.5,
         fillColor: spec.solid,
         color: '#FFFFFF',
-        weight: 2,
-        fillOpacity: 0.95,
+        weight: 2.5,
+        fillOpacity: 1.0,
+        className: 'leaflet-truck-checkpoint-marker',
       });
 
       // HTML popup with rich checkpoint information
       const popupHtml = createCheckpointPopupHtml(cp, selectedRoute.distance_mi, loadLb);
       marker.bindPopup(popupHtml, {
-        minWidth: 240,
+        minWidth: 260,
         maxWidth: 320,
         className: 'leaflet-truck-checkpoint-popup',
+        autoPan: true,
+      });
+
+      // Explicit click handler to reliably open popup and prevent click bubbling to route polyline
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        marker.openPopup();
       });
 
       // Hover emphasis
       marker.on('mouseover', () => {
-        marker.setRadius(8.5);
+        marker.setRadius(10);
       });
       marker.on('mouseout', () => {
-        marker.setRadius(6.5);
+        marker.setRadius(7.5);
       });
 
       group.addLayer(marker);

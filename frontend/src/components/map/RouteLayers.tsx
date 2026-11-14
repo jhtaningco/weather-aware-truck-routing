@@ -87,9 +87,12 @@ export const RouteLayers: React.FC<RouteLayersProps> = ({
         },
       );
 
-      // Click to select
-      polyline.on('click', () => {
-        onSelectRoute(route.id);
+      // Click to select route
+      polyline.on('click', (e) => {
+        if (!isSelected) {
+          L.DomEvent.stopPropagation(e);
+          onSelectRoute(route.id);
+        }
       });
 
       // Hover emphasis
@@ -105,10 +108,6 @@ export const RouteLayers: React.FC<RouteLayersProps> = ({
       });
 
       group.addLayer(polyline);
-
-      if (isSelected) {
-        polyline.bringToFront();
-      }
     });
   }, [routes, recommendedRouteId, selectedRouteId, onSelectRoute]);
 

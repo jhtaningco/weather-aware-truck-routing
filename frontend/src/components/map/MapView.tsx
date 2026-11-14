@@ -87,6 +87,9 @@ export const MapView: React.FC<MapViewProps> = ({
         '& .leaflet-popup-tip': {
           boxShadow: '0 4px 12px rgba(16, 24, 40, 0.12)',
         },
+        '& .leaflet-truck-checkpoint-marker': {
+          cursor: 'pointer !important',
+        },
       }}
     >
       <MapContainer
