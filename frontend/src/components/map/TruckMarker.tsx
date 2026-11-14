@@ -18,6 +18,8 @@ export const TruckMarker: React.FC<TruckMarkerProps> = ({
 }) => {
   const map = useMap();
   const markerRef = useRef<L.Marker | null>(null);
+  const prevHourRef = useRef<number>(currentHour);
+  const prevArrivedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!route || !route.checkpoints || route.checkpoints.length === 0 || !departAt) {
@@ -87,14 +89,19 @@ export const TruckMarker: React.FC<TruckMarkerProps> = ({
       statusText = `🚚 Mile ${Math.round(mile)} • In Transit`;
     }
 
+    const prevHour = prevHourRef.current;
+    prevHourRef.current = currentHour;
+    // Sequential 1-hour playback step should glide smoothly via 60fps CSS transform transition
+    const isSequentialStep = Math.abs(currentHour - prevHour) === 1;
+
     const iconHtml = `
       <div style="position: relative; display: flex; align-items: center; justify-content: center; pointer-events: auto;">
         <!-- Status Pill -->
-        <div style="position: absolute; top: -26px; background: ${isArrived ? '#12B76A' : '#1D2939'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-family: 'Outfit', sans-serif; border: 1.5px solid white;">
+        <div class="truck-status-text" style="position: absolute; top: -26px; background: ${isArrived ? '#12B76A' : '#1D2939'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-family: 'Outfit', sans-serif; border: 1.5px solid white;">
           ${statusText}
         </div>
         <!-- Truck Circle Badge -->
-        <div style="background: ${isArrived ? '#12B76A' : '#465FFF'}; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(70, 95, 255, 0.45); border: 2.5px solid white; cursor: pointer; transition: transform 0.15s ease;">
+        <div style="background: ${isArrived ? '#12B76A' : '#465FFF'}; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(70, 95, 255, 0.45); border: 2.5px solid white; cursor: pointer;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
           </svg>
@@ -134,9 +141,28 @@ export const TruckMarker: React.FC<TruckMarkerProps> = ({
       });
 
       markerRef.current = marker;
+      prevArrivedRef.current = isArrived;
     } else {
+      const el = markerRef.current.getElement();
+      if (el) {
+        // Smooth 60fps glide during Play animation; instant snap during manual slider scrubbing
+        el.style.transition = isSequentialStep ? 'transform 0.62s linear' : 'none';
+
+        const statusEl = el.querySelector('.truck-status-text');
+        if (statusEl) {
+          statusEl.textContent = statusText;
+          (statusEl as HTMLElement).style.background = isArrived ? '#12B76A' : '#1D2939';
+        }
+      }
+
       markerRef.current.setLatLng([lat, lon]);
-      markerRef.current.setIcon(icon);
+
+      // Only recreate icon DOM if arrived state flipped to avoid interrupting CSS transform
+      if (prevArrivedRef.current !== isArrived) {
+        prevArrivedRef.current = isArrived;
+        markerRef.current.setIcon(icon);
+      }
+
       markerRef.current.setPopupContent(popupHtml);
     }
   }, [map, route, currentHour, departAt, loadLb]);
