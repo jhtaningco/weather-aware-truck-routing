@@ -101,6 +101,7 @@ if not FRONTEND_DIST.exists():
     FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 
 STATICFILES_DIRS = [FRONTEND_DIST] if FRONTEND_DIST.exists() else []
+WHITENOISE_ROOT = str(FRONTEND_DIST) if FRONTEND_DIST.exists() else None
 
 STORAGES = {
     "default": {
