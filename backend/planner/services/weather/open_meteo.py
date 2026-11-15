@@ -15,10 +15,10 @@ from .base import CheckpointWeather, WeatherProvider
 logger = logging.getLogger(__name__)
 
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-BATCH_CHUNK_SIZE = 45
+BATCH_CHUNK_SIZE = 40
 WEATHER_CACHE_TTL = 3600  # 1 hour
 USER_AGENT = "WeatherAwareTruckRouting/1.0 (assessment@spotter.ai)"
-DEFAULT_TIMEOUT = 12
+DEFAULT_TIMEOUT = 10
 
 
 def _round_coord(coord: Coordinate) -> tuple[float, float]:
@@ -43,7 +43,7 @@ class OpenMeteoWeatherProvider(WeatherProvider):
         self.base_url = base_url
         self.timeout = timeout
         self.session = requests.Session()
-        adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10, max_retries=1)
+        adapter = requests.adapters.HTTPAdapter(pool_connections=5, pool_maxsize=5, max_retries=0)
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
@@ -69,6 +69,13 @@ class OpenMeteoWeatherProvider(WeatherProvider):
                 series_by_coord[c] = series
                 cache_key = f"weather:series:{c[0]}:{c[1]}"
                 cache.set(cache_key, series, timeout=WEATHER_CACHE_TTL)
+
+            # Prevent cascading retries if any coordinate failed
+            for c in missing_coords:
+                if c not in series_by_coord:
+                    series_by_coord[c] = {}
+                    cache_key = f"weather:series:{c[0]}:{c[1]}"
+                    cache.set(cache_key, {}, timeout=300)
 
         return series_by_coord
 
@@ -138,29 +145,21 @@ class OpenMeteoWeatherProvider(WeatherProvider):
     def _fetch_batches(
         self, coords: list[tuple[float, float]]
     ) -> dict[tuple[float, float], dict[str, list]]:
-        """Fetch hourly weather series from Open-Meteo concurrently in parallel chunks."""
+        """Fetch hourly weather series from Open-Meteo sequentially to prevent concurrency rate limits."""
         chunks = [
             coords[i : i + BATCH_CHUNK_SIZE]
             for i in range(0, len(coords), BATCH_CHUNK_SIZE)
         ]
         if not chunks:
             return {}
-        if len(chunks) == 1:
-            return self._fetch_single_chunk(chunks[0])
 
         results: dict[tuple[float, float], dict[str, list]] = {}
-        max_workers = min(len(chunks), 4)
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_chunk = {
-                executor.submit(self._fetch_single_chunk, chunk): chunk
-                for chunk in chunks
-            }
-            for future in as_completed(future_to_chunk):
-                try:
-                    chunk_data = future.result()
-                    results.update(chunk_data)
-                except Exception as exc:
-                    logger.warning("Chunk fetch exception: %s", exc)
+        for chunk in chunks:
+            try:
+                chunk_data = self._fetch_single_chunk(chunk)
+                results.update(chunk_data)
+            except Exception as exc:
+                logger.warning("Chunk fetch exception: %s", exc)
 
         return results
 
