@@ -319,7 +319,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
         }}
       >
         {hourRiskSummary.some((r) => r > 0)
-          ? '⚡ Radar layer active: storm fronts develop ahead. Click ▶️ Play or drag slider to animate weather.'
+          ? '⚡ Heatmap corridor active: weather fronts develop ahead. Click ▶️ Play or drag slider to animate.'
           : '☀️ All clear: 0 hazards forecast across the corridor for the next 48 hours.'}
       </Typography>
 
@@ -337,7 +337,7 @@ export const ForecastSlider: React.FC<ForecastSliderProps> = ({
         }}
       >
         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.675rem', fontWeight: 600 }}>
-          Radar Legend:
+          Heatmap Legend:
         </Typography>
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
           <Box
