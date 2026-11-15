@@ -9,7 +9,7 @@ Built for the **Spotter.AI Full Stack Take-Home Assessment**.
 ## 🚀 Live Demo & Links
 
 - **Hosted Application:** [https://weather-aware-truck-routing.onrender.com](https://weather-aware-truck-routing.onrender.com)
-- **Loom Walkthrough:** *(attach your Loom video URL here)*
+- **Loom Video Walkthrough:** [Watch the Loom Demo](https://www.loom.com/share/c40b1933cb9848278b6132f4a9096c90)
 - **Architecture & Technical Decisions:** [docs/DECISIONS.md](docs/DECISIONS.md)
 
 ---
