@@ -3,11 +3,11 @@ import NavigationOutlinedIcon from '@mui/icons-material/NavigationOutlined';
 import ScaleOutlinedIcon from '@mui/icons-material/ScaleOutlined';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
   InputAdornment,
-  MenuItem,
   Stack,
   TextField,
   ToggleButton,
@@ -16,8 +16,9 @@ import {
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs, { Dayjs } from 'dayjs';
-import React, { useState } from 'react';
-import type { LocationPoint, PlanRequest } from '../types/api';
+import React, { useEffect, useState } from 'react';
+import { fetchGeocode } from '../api/client';
+import type { GeocodeResult, LocationPoint, PlanRequest } from '../types/api';
 
 interface TripFormProps {
   onSubmit: (params: PlanRequest) => void;
@@ -25,28 +26,88 @@ interface TripFormProps {
   error?: string | null;
 }
 
-export const AVAILABLE_LOCATIONS: LocationPoint[] = [
-  { label: 'Dallas, TX, United States', lat: 32.7767, lon: -96.797 },
-  { label: 'Denver, CO, United States', lat: 39.7392, lon: -104.9903 },
-  { label: 'Chicago, IL, United States', lat: 41.8781, lon: -87.6298 },
-  { label: 'Atlanta, GA, United States', lat: 33.749, lon: -84.388 },
-  { label: 'Los Angeles, CA, United States', lat: 34.0522, lon: -118.2437 },
-  { label: 'Houston, TX, United States', lat: 29.7604, lon: -95.3698 },
-  { label: 'Phoenix, AZ, United States', lat: 33.4484, lon: -112.074 },
-  { label: 'Seattle, WA, United States', lat: 47.6062, lon: -122.3321 },
-  { label: 'Miami, FL, United States', lat: 25.7617, lon: -80.1918 },
-  { label: 'New York, NY, United States', lat: 40.7128, lon: -74.006 },
-];
+const DEFAULT_ORIGIN: LocationPoint = {
+  label: 'Dallas, TX, United States',
+  lat: 32.7767,
+  lon: -96.797,
+};
 
-const DEFAULT_ORIGIN: LocationPoint = AVAILABLE_LOCATIONS[0] as LocationPoint;
-const DEFAULT_DESTINATION: LocationPoint = AVAILABLE_LOCATIONS[1] as LocationPoint;
+const DEFAULT_DESTINATION: LocationPoint = {
+  label: 'Denver, CO, United States',
+  lat: 39.7392,
+  lon: -104.9903,
+};
 
 export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }) => {
   const [origin, setOrigin] = useState<LocationPoint | null>(DEFAULT_ORIGIN);
+  const [originInput, setOriginInput] = useState('Dallas, TX');
+  const [originOptions, setOriginOptions] = useState<GeocodeResult[]>([]);
+  const [originLoading, setOriginLoading] = useState(false);
+
   const [destination, setDestination] = useState<LocationPoint | null>(DEFAULT_DESTINATION);
+  const [destInput, setDestInput] = useState('Denver, CO');
+  const [destOptions, setDestOptions] = useState<GeocodeResult[]>([]);
+  const [destLoading, setDestLoading] = useState(false);
+
   const [departTime, setDepartTime] = useState<Dayjs | null>(dayjs().add(2, 'hour'));
   const [loadLb, setLoadLb] = useState<number | ''>(35000);
   const [intervalMi, setIntervalMi] = useState<10 | 25 | 50>(25);
+
+  // Debounced geocoding for Origin
+  useEffect(() => {
+    if (!originInput || originInput.trim().length < 2) {
+      return;
+    }
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      setOriginLoading(true);
+      try {
+        const results = await fetchGeocode(originInput);
+        if (!isCancelled) {
+          setOriginOptions(results);
+        }
+      } catch {
+        // Handled silently for autocomplete suggestions
+      } finally {
+        if (!isCancelled) {
+          setOriginLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [originInput]);
+
+  // Debounced geocoding for Destination
+  useEffect(() => {
+    if (!destInput || destInput.trim().length < 2) {
+      return;
+    }
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      setDestLoading(true);
+      try {
+        const results = await fetchGeocode(destInput);
+        if (!isCancelled) {
+          setDestOptions(results);
+        }
+      } catch {
+        // Handled silently for autocomplete suggestions
+      } finally {
+        if (!isCancelled) {
+          setDestLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [destInput]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,61 +162,97 @@ export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }
           </Alert>
         )}
 
-        {/* Origin Dropdown */}
-        <TextField
-          select
-          label="Origin City or Address"
-          value={origin?.label || ''}
-          onChange={(e) => {
-            const found = AVAILABLE_LOCATIONS.find((loc) => loc.label === e.target.value);
-            if (found) setOrigin(found);
+        {/* Origin Autocomplete */}
+        <Autocomplete
+          value={origin}
+          onChange={(_, val) => setOrigin(val)}
+          inputValue={originInput}
+          onInputChange={(_, val) => {
+            setOriginInput(val);
+            if (!val || val.trim().length < 2) {
+              setOriginOptions([]);
+            }
           }}
-          required
-          fullWidth
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <LocationOnOutlinedIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        >
-          {AVAILABLE_LOCATIONS.map((loc) => (
-            <MenuItem key={loc.label} value={loc.label}>
-              {loc.label}
-            </MenuItem>
-          ))}
-        </TextField>
+          options={originOptions}
+          getOptionLabel={(opt) => opt.label}
+          isOptionEqualToValue={(opt, val) => opt.lat === val.lat && opt.lon === val.lon}
+          loading={originLoading}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Origin City or Address"
+              placeholder="e.g. Dallas, TX"
+              required
+              fullWidth
+              slotProps={{
+                ...params.slotProps,
+                input: {
+                  ...params.slotProps?.input,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start">
+                        <LocationOnOutlinedIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                      </InputAdornment>
+                      {params.slotProps?.input?.startAdornment}
+                    </>
+                  ),
+                  endAdornment: (
+                    <>
+                      {originLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                      {params.slotProps?.input?.endAdornment}
+                    </>
+                  ),
+                },
+              }}
+            />
+          )}
+        />
 
-        {/* Destination Dropdown */}
-        <TextField
-          select
-          label="Destination City or Address"
-          value={destination?.label || ''}
-          onChange={(e) => {
-            const found = AVAILABLE_LOCATIONS.find((loc) => loc.label === e.target.value);
-            if (found) setDestination(found);
+        {/* Destination Autocomplete */}
+        <Autocomplete
+          value={destination}
+          onChange={(_, val) => setDestination(val)}
+          inputValue={destInput}
+          onInputChange={(_, val) => {
+            setDestInput(val);
+            if (!val || val.trim().length < 2) {
+              setDestOptions([]);
+            }
           }}
-          required
-          fullWidth
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <NavigationOutlinedIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        >
-          {AVAILABLE_LOCATIONS.map((loc) => (
-            <MenuItem key={loc.label} value={loc.label}>
-              {loc.label}
-            </MenuItem>
-          ))}
-        </TextField>
+          options={destOptions}
+          getOptionLabel={(opt) => opt.label}
+          isOptionEqualToValue={(opt, val) => opt.lat === val.lat && opt.lon === val.lon}
+          loading={destLoading}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Destination City or Address"
+              placeholder="e.g. Denver, CO"
+              required
+              fullWidth
+              slotProps={{
+                ...params.slotProps,
+                input: {
+                  ...params.slotProps?.input,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start">
+                        <NavigationOutlinedIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                      </InputAdornment>
+                      {params.slotProps?.input?.startAdornment}
+                    </>
+                  ),
+                  endAdornment: (
+                    <>
+                      {destLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                      {params.slotProps?.input?.endAdornment}
+                    </>
+                  ),
+                },
+              }}
+            />
+          )}
+        />
 
         {/* Departure Date/Time Picker */}
         <DateTimePicker
