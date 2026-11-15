@@ -9,53 +9,82 @@ interface HeatmapLayerProps {
   visible: boolean;
 }
 
-interface GradientStop {
-  offset: number;
-  color: string;
+interface RadarBand {
+  radiusRatio: number; // fraction of full storm cell radius
+  fill: string;        // stepped radar reflectivity fill
 }
 
-// Organic Continuous Density Heatmap Color Palettes (GIS / Leaflet.heat style).
-// Smooth fluid transitions:
+// Authentic Doppler Weather Radar Reflectivity Palette (NOAA / NEXRAD Level 3 / RadarOmega style).
+// Discrete stepped contour bands (dBZ thresholds) with zero cosmetic blur and zero target strokes:
 // - Risk 0 (Clear Skies): 100% transparent: highways and basemap remain pristine and clean.
-// - Risk 1 (Moderate): Lush Emerald Green fringe -> Lime-Yellow body -> Warm Gold center.
-// - Risk 2 (High / Crosswinds): Deep Green fringe -> Lime-Yellow body -> Warm Gold -> Vivid Amber-Orange core.
-// - Risk 3 (Severe Storm): Deep Green fringe -> Gold -> Vivid Orange -> Deep Crimson / Ruby Red epicenter core.
-// - Risk 4 (Extreme / No Travel): Deep Green fringe -> Gold -> Orange -> Crimson -> Dark Maroon / Burgundy core.
-const HEATMAP_STOPS: Record<number, GradientStop[]> = {
+// - Risk 1 (Moderate): Golden Yellow reflectivity halo + Gold core (dBZ 25-35).
+// - Risk 2 (High / Crosswinds): Amber fringe + Vivid Radar Orange body + Crimson Red core (dBZ 35-50).
+// - Risk 3 (Severe Storm): Radar Orange fringe + Crimson body + Burgundy core + Magenta peak (dBZ 50-60).
+// - Risk 4 (Extreme / No Travel): Crimson fringe + Deep Violet body + Fuchsia core + White-hot eye (dBZ 60+).
+const RADAR_TIERS: Record<number, RadarBand[]> = {
   1: [
-    { offset: 0.0, color: 'rgba(234, 179, 8, 0.72)' },   // Warm Gold center
-    { offset: 0.35, color: 'rgba(163, 230, 53, 0.62)' }, // Lime / Yellow-Green
-    { offset: 0.70, color: 'rgba(34, 197, 94, 0.48)' },  // Lush Emerald Green body
-    { offset: 0.92, color: 'rgba(21, 128, 61, 0.22)' },  // Deep Green outer contour
-    { offset: 1.0, color: 'rgba(21, 128, 61, 0.0)' },    // Soft fade
+    {
+      radiusRatio: 1.0,
+      fill: 'rgba(250, 204, 21, 0.35)', // Golden Yellow outer reflectivity
+    },
+    {
+      radiusRatio: 0.55,
+      fill: 'rgba(234, 179, 8, 0.75)', // Solid Gold moderate core
+    },
   ],
   2: [
-    { offset: 0.0, color: 'rgba(249, 115, 22, 0.88)' },  // Vivid Orange hotspot
-    { offset: 0.28, color: 'rgba(234, 179, 8, 0.76)' },  // Warm Gold
-    { offset: 0.58, color: 'rgba(132, 204, 22, 0.60)' }, // Lime-Yellow
-    { offset: 0.82, color: 'rgba(34, 197, 94, 0.45)' },  // Emerald Green body
-    { offset: 0.95, color: 'rgba(21, 128, 61, 0.20)' },  // Deep Green fringe
-    { offset: 1.0, color: 'rgba(21, 128, 61, 0.0)' },    // Soft fade
+    {
+      radiusRatio: 1.0,
+      fill: 'rgba(251, 191, 36, 0.35)', // Amber / Warm Gold fringe
+    },
+    {
+      radiusRatio: 0.65,
+      fill: 'rgba(249, 115, 22, 0.74)', // Vivid Radar Orange storm body
+    },
+    {
+      radiusRatio: 0.34,
+      fill: 'rgba(220, 38, 38, 0.88)', // Deep Crimson severe center
+    },
   ],
   3: [
-    { offset: 0.0, color: 'rgba(185, 28, 28, 0.96)' },   // Deep Crimson / Ruby Red severe core
-    { offset: 0.22, color: 'rgba(239, 68, 68, 0.88)' },  // Bright Red
-    { offset: 0.45, color: 'rgba(249, 115, 22, 0.78)' }, // Vivid Orange
-    { offset: 0.70, color: 'rgba(234, 179, 8, 0.60)' },  // Gold / Yellow
-    { offset: 0.88, color: 'rgba(34, 197, 94, 0.42)' },  // Emerald Green
-    { offset: 0.96, color: 'rgba(21, 128, 61, 0.18)' },  // Deep Green fringe
-    { offset: 1.0, color: 'rgba(21, 128, 61, 0.0)' },
+    {
+      radiusRatio: 1.0,
+      fill: 'rgba(249, 115, 22, 0.38)', // Radar Orange fringe
+    },
+    {
+      radiusRatio: 0.70,
+      fill: 'rgba(220, 38, 38, 0.78)', // Intense Crimson storm body
+    },
+    {
+      radiusRatio: 0.42,
+      fill: 'rgba(153, 27, 27, 0.90)', // Dark Burgundy severe core
+    },
+    {
+      radiusRatio: 0.20,
+      fill: 'rgba(217, 70, 239, 0.95)', // Electric Magenta peak
+    },
   ],
   4: [
-    { offset: 0.0, color: 'rgba(127, 29, 29, 0.98)' },   // Dark Blood Red / Maroon core
-    { offset: 0.20, color: 'rgba(185, 28, 28, 0.92)' },  // Deep Crimson
-    { offset: 0.42, color: 'rgba(239, 68, 68, 0.84)' },  // Bright Red
-    { offset: 0.62, color: 'rgba(249, 115, 22, 0.72)' }, // Vivid Orange
-    { offset: 0.80, color: 'rgba(234, 179, 8, 0.54)' },  // Gold
-    { offset: 0.92, color: 'rgba(34, 197, 94, 0.38)' },  // Green
-    { offset: 1.0, color: 'rgba(21, 128, 61, 0.0)' },
+    {
+      radiusRatio: 1.0,
+      fill: 'rgba(220, 38, 38, 0.42)', // Deep Crimson fringe
+    },
+    {
+      radiusRatio: 0.72,
+      fill: 'rgba(147, 51, 234, 0.82)', // Deep Violet / Purple storm body
+    },
+    {
+      radiusRatio: 0.44,
+      fill: 'rgba(192, 38, 211, 0.92)', // Vivid Fuchsia core
+    },
+    {
+      radiusRatio: 0.22,
+      fill: 'rgba(250, 232, 255, 0.98)', // White-Violet Supercell eye
+    },
   ],
 };
+
+const MAX_RADAR_PASSES = 4;
 
 interface ActiveCell {
   x: number;
@@ -114,14 +143,14 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
       const [lat, lon] = ptCoords;
       const pt = map.latLngToContainerPoint([lat, lon]);
 
-      // Physical storm cell radius: ~48 miles (76,000 meters) footprint
+      // Physical storm cell radius: ~42 miles (68,000 meters) footprint
       // Ensures adjacent corridor checkpoints continuously merge without dispersing
       const metersPerPixel =
         (40075016.686 * Math.abs(Math.cos((lat * Math.PI) / 180))) / Math.pow(2, zoom + 8);
-      const stormFootprintMeters = 76000;
+      const stormFootprintMeters = 68000;
       const radius = Math.min(
         maxScreenRadius,
-        Math.max(30, Math.round(stormFootprintMeters / Math.max(metersPerPixel, 0.1)))
+        Math.max(26, Math.round(stormFootprintMeters / Math.max(metersPerPixel, 0.1)))
       );
 
       if (
@@ -138,25 +167,23 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
 
     if (activeCells.length === 0) return;
 
-    // Sort cells by riskLevel ascending:
-    // Broad green bodies render first, so hotter orange and deep red centers bloom on top
-    activeCells.sort((a, b) => a.riskLevel - b.riskLevel);
+    // Multi-pass Doppler radar rendering:
+    // Pass 0: Outer reflectivity envelopes (all active storm cells merge into a continuous corridor front)
+    // Pass 1: Mid storm bodies (solid radar orange / gold reflectivity)
+    // Pass 2: Severe cores (crimson red / burgundy centers)
+    // Pass 3: Peak supercell eyes (magenta / white-hot peaks)
+    // Solid stepped reflectivity bands without pen strokes for clean, authentic meteorological radar.
+    for (let pass = 0; pass < MAX_RADAR_PASSES; pass++) {
+      for (const cell of activeCells) {
+        const band = RADAR_TIERS[cell.riskLevel]?.[pass];
+        if (!band) continue;
 
-    // Continuous organic density rendering:
-    // Smooth radial gradients with color ramps (Green fringe -> Yellow -> Orange -> Crimson core)
-    for (const cell of activeCells) {
-      const stops = HEATMAP_STOPS[cell.riskLevel];
-      if (!stops) continue;
-
-      const grad = ctx.createRadialGradient(cell.x, cell.y, 0, cell.x, cell.y, cell.radius);
-      for (const stop of stops) {
-        grad.addColorStop(stop.offset, stop.color);
+        const bandRadius = Math.max(4, Math.round(cell.radius * band.radiusRatio));
+        ctx.fillStyle = band.fill;
+        ctx.beginPath();
+        ctx.arc(cell.x, cell.y, bandRadius, 0, Math.PI * 2);
+        ctx.fill();
       }
-
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
-      ctx.fill();
     }
   }, [map, visible, heatmap, currentHour]);
 
@@ -174,9 +201,9 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
     canvas.style.top = '0';
     canvas.style.left = '0';
     canvas.style.pointerEvents = 'none';
-    // Organic continuous fluid density heatmap with smooth edge blending
-    canvas.style.filter = 'blur(8px)';
-    canvas.style.opacity = '0.86';
+    // Clean digital Doppler weather radar with stepped reflectivity fills
+    canvas.style.filter = 'none';
+    canvas.style.opacity = '0.82';
     canvas.style.transition = 'opacity 0.2s ease';
 
     pane.appendChild(canvas);

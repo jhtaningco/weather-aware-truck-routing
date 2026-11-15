@@ -26,18 +26,6 @@ interface TripFormProps {
   error?: string | null;
 }
 
-const DEFAULT_ORIGIN: LocationPoint = {
-  label: 'Dallas, TX, United States',
-  lat: 32.7767,
-  lon: -96.797,
-};
-
-const DEFAULT_DESTINATION: LocationPoint = {
-  label: 'Denver, CO, United States',
-  lat: 39.7392,
-  lon: -104.9903,
-};
-
 export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }) => {
   const [origin, setOrigin] = useState<LocationPoint | null>(null);
   const [originInput, setOriginInput] = useState('');
