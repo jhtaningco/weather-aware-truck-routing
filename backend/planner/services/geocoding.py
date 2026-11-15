@@ -14,6 +14,19 @@ ORS_GEOCODE_URL = "https://api.openrouteservice.org/geocode/search"
 PHOTON_GEOCODE_URL = "https://photon.komoot.io/api/"
 CACHE_TTL_SECONDS = 86400  # 24 hours
 
+US_STATE_ABBRS = {
+    "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR", "california": "CA",
+    "colorado": "CO", "connecticut": "CT", "delaware": "DE", "florida": "FL", "georgia": "GA",
+    "hawaii": "HI", "idaho": "ID", "illinois": "IL", "indiana": "IN", "iowa": "IA",
+    "kansas": "KS", "kentucky": "KY", "louisiana": "LA", "maine": "ME", "maryland": "MD",
+    "massachusetts": "MA", "michigan": "MI", "minnesota": "MN", "mississippi": "MS", "missouri": "MO",
+    "montana": "MT", "nebraska": "NE", "nevada": "NV", "new hampshire": "NH", "new jersey": "NJ",
+    "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND", "ohio": "OH",
+    "oklahoma": "OK", "oregon": "OR", "pennsylvania": "PA", "rhode island": "RI", "south carolina": "SC",
+    "south dakota": "SD", "tennessee": "TN", "texas": "TX", "utah": "UT", "vermont": "VT",
+    "virginia": "VA", "washington": "WA", "west virginia": "WV", "wisconsin": "WI", "wyoming": "WY",
+}
+
 # Common US logistics hubs and test fixtures for offline development and testing
 FALLBACK_CITIES = {
     "dallas": {"label": "Dallas, TX, United States", "lat": 32.7767, "lon": -96.7970},
@@ -39,24 +52,36 @@ def _query_photon(query: str, limit: int = 5) -> list[dict[str, Any]]:
     """Query the free Photon geocoding API powered by OpenStreetMap."""
     try:
         headers = {"User-Agent": "WeatherAwareTruckRouting/1.0 (assessment@spotter.ai)"}
-        params = {"q": query, "limit": limit}
+        params = {"q": query, "limit": limit * 2}
         resp = requests.get(PHOTON_GEOCODE_URL, params=params, headers=headers, timeout=4)
         if resp.status_code == 200:
             data = resp.json()
             results = []
+            seen_labels: set[str] = set()
             for feat in data.get("features", []):
                 props = feat.get("properties", {})
                 geom = feat.get("geometry", {})
                 coords = geom.get("coordinates", [])
                 if len(coords) >= 2:
-                    parts = [props.get("name")]
+                    name = props.get("name")
                     state = props.get("state")
-                    if state and state != props.get("name"):
-                        parts.append(state)
                     country = props.get("country")
+                    # Abbreviate US states for standard commercial addresses
+                    if state and country in ("United States", "USA", "US"):
+                        state = US_STATE_ABBRS.get(state.lower(), state)
+
+                    parts = [name]
+                    if state and state != name:
+                        parts.append(state)
                     if country:
                         parts.append(country)
                     label = ", ".join(p for p in parts if p)
+
+                    # Deduplicate near-identical labels
+                    if label in seen_labels:
+                        continue
+                    seen_labels.add(label)
+
                     results.append(
                         {
                             "label": label,
@@ -64,6 +89,8 @@ def _query_photon(query: str, limit: int = 5) -> list[dict[str, Any]]:
                             "lon": round(float(coords[0]), 5),
                         }
                     )
+                    if len(results) >= limit:
+                        break
             return results
     except Exception as exc:
         logger.warning("Photon geocoding request failed: %s", exc)
@@ -114,13 +141,28 @@ def geocode_address(query: str, limit: int = 5) -> list[dict[str, Any]]:
         except Exception as exc:
             logger.warning("ORS Geocoding request failed: %s", exc)
 
-    # If no ORS results (e.g. no API key configured), query free OSM/Photon geocoding
-    if not results:
-        results = _query_photon(clean_query, limit=limit)
+    if results:
+        cache.set(cache_key, results, timeout=CACHE_TTL_SECONDS)
+        return results
 
-    # Fallback to local curated cities if network unavailable or empty
+    # Check curated logistics hubs to prioritize exact clean matches (Dallas, TX, Denver, CO, etc.)
+    q_lower = clean_query.lower()
+    for name, city in FALLBACK_CITIES.items():
+        if q_lower == name or q_lower.startswith(f"{name},") or q_lower.startswith(f"{name} "):
+            if not any(r["label"] == city["label"] for r in results):
+                results.insert(0, dict(city))
+
+    # If more results needed, query free OSM/Photon geocoding
+    if len(results) < limit:
+        photon_results = _query_photon(clean_query, limit=limit)
+        for pr in photon_results:
+            if not any(r["label"] == pr["label"] for r in results):
+                results.append(pr)
+            if len(results) >= limit:
+                break
+
+    # Final fallback if still empty
     if not results:
-        q_lower = clean_query.lower()
         for name, city in FALLBACK_CITIES.items():
             if name in q_lower or q_lower in name:
                 results.append(dict(city))

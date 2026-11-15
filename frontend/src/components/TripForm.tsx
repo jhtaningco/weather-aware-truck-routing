@@ -39,13 +39,13 @@ const DEFAULT_DESTINATION: LocationPoint = {
 };
 
 export const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading, error }) => {
-  const [origin, setOrigin] = useState<LocationPoint | null>(DEFAULT_ORIGIN);
-  const [originInput, setOriginInput] = useState('Dallas, TX');
+  const [origin, setOrigin] = useState<LocationPoint | null>(null);
+  const [originInput, setOriginInput] = useState('');
   const [originOptions, setOriginOptions] = useState<GeocodeResult[]>([]);
   const [originLoading, setOriginLoading] = useState(false);
 
-  const [destination, setDestination] = useState<LocationPoint | null>(DEFAULT_DESTINATION);
-  const [destInput, setDestInput] = useState('Denver, CO');
+  const [destination, setDestination] = useState<LocationPoint | null>(null);
+  const [destInput, setDestInput] = useState('');
   const [destOptions, setDestOptions] = useState<GeocodeResult[]>([]);
   const [destLoading, setDestLoading] = useState(false);
 
