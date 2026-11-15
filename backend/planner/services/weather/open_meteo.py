@@ -15,9 +15,10 @@ from .base import CheckpointWeather, WeatherProvider
 logger = logging.getLogger(__name__)
 
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-BATCH_CHUNK_SIZE = 20
+BATCH_CHUNK_SIZE = 45
 WEATHER_CACHE_TTL = 3600  # 1 hour
 USER_AGENT = "WeatherAwareTruckRouting/1.0 (assessment@spotter.ai)"
+DEFAULT_TIMEOUT = 12
 
 
 def _round_coord(coord: Coordinate) -> tuple[float, float]:
@@ -38,9 +39,13 @@ def _parse_utc_iso(time_str: str) -> datetime:
 class OpenMeteoWeatherProvider(WeatherProvider):
     """Weather provider implementation backed by Open-Meteo free API."""
 
-    def __init__(self, base_url: str = OPEN_METEO_FORECAST_URL, timeout: int = 5):
+    def __init__(self, base_url: str = OPEN_METEO_FORECAST_URL, timeout: int = DEFAULT_TIMEOUT):
         self.base_url = base_url
         self.timeout = timeout
+        self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10, max_retries=1)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def get_hourly_series_batch(
         self, coords: Sequence[Coordinate]
@@ -113,7 +118,7 @@ class OpenMeteoWeatherProvider(WeatherProvider):
         headers = {"User-Agent": USER_AGENT}
 
         try:
-            resp = requests.get(
+            resp = self.session.get(
                 self.base_url, params=params, headers=headers, timeout=self.timeout
             )
             if resp.status_code == 200:
@@ -144,7 +149,7 @@ class OpenMeteoWeatherProvider(WeatherProvider):
             return self._fetch_single_chunk(chunks[0])
 
         results: dict[tuple[float, float], dict[str, list]] = {}
-        max_workers = min(len(chunks), 6)
+        max_workers = min(len(chunks), 4)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_chunk = {
                 executor.submit(self._fetch_single_chunk, chunk): chunk
